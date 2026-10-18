@@ -1,0 +1,14 @@
+[app]
+identifier = "com.neko233.zip233"
+name = "zip233"
+version = "0.1.0"
+
+[renderer]
+kind = "webview"
+trusted_origins = ["rdesktop://localhost"]
+
+[bundle]
+windows_installer = "nsis"
+macos_bundle_id = "com.neko233.zip233"
+macos_dmg = false
+copyright = "neko233-com"

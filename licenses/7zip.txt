@@ -1,0 +1,14 @@
+This application bundles the command-line tools from the 7-Zip project
+(`7z.exe` and `7z.dll` on Windows, and `7zz` on macOS).
+
+7-Zip is free software. Most of its source code is licensed under the GNU LGPL;
+some parts use the BSD 3-clause license, and the unRAR code has additional
+restrictions. See the upstream license for the complete terms:
+https://github.com/ip7z/7zip/blob/26.04/DOC/License.txt
+
+The upstream source code and platform releases are available at:
+https://github.com/ip7z/7zip/releases/tag/26.04
+
+zip233 does not modify the upstream executables. The build preparation script fetches
+the original upstream release for the current platform and bundles that binary
+with the application.

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+target/
+.cache/
+resources/engines/
+.rdesktop/
+*.log
+.DS_Store
+Thumbs.db
