@@ -34,3 +34,25 @@ export type ShellIntegrationStatus = {
   enabled: boolean;
   healthy: boolean;
 };
+
+export type UpdateInfo = {
+  current_version: string;
+  latest_version: string | null;
+  available: boolean;
+  release_url: string | null;
+  release_notes: string | null;
+  asset_name: string | null;
+  asset_size: number | null;
+  can_download: boolean;
+  message: string;
+};
+
+export type UpdateDownloadState = {
+  status: "idle" | "downloading" | "ready" | "error" | string;
+  version: string | null;
+  asset_name: string | null;
+  downloaded_bytes: number;
+  total_bytes: number | null;
+  message: string;
+  file_path: string | null;
+};

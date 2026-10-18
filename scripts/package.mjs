@@ -1,16 +1,18 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const archiveExtensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace", "arj", "arc", "pak", "zoo", "ha", "jar", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha", "ice", "pi9"];
 const legacyArchiveExtensions = ["zst", "lz", "lzma", "cab", "wim", "iso", "dmg", "rpm", "deb", "cpio", "chm", "vhd", "vhdx", "vmdk", "vdi", "qcow2", "udf", "xar", "apfs", "squashfs", "cramfs", "fat", "ntfs", "gpt", "mbr", "uefi", "ihex", "nsis", "msi", "hfs"];
 const windows = process.platform === "win32";
 const mac = process.platform === "darwin";
 if (!windows && !mac) throw new Error("zip233 packages Windows and macOS builds on their native hosts.");
 
 const binary = path.join(root, "target", "release", windows ? "zip233.exe" : "zip233");
+const cliBinary = path.join(root, "target", "release", windows ? "zip233-cli.exe" : "zip233-cli");
 const icon = windows
   ? path.join(root, "resources", "icons", "zip233.ico")
   : await createMacIcon();
@@ -33,10 +35,14 @@ try {
   if (windows) {
     await patchInstaller();
     await patchUninstaller();
+    await buildMsi();
   }
 
   if (mac) {
     const appPath = path.join(root, "target", "release", "bundle", "macos", "zip233.app");
+    const appCliPath = path.join(appPath, "Contents", "MacOS", "zip233-cli");
+    await copyFile(cliBinary, appCliPath);
+    await chmod(appCliPath, 0o755);
     const dmgPath = path.join(root, "target", "release", "bundle", "macos", "zip233-0.1.0.dmg");
     await mkdir(path.dirname(dmgPath), { recursive: true });
     await rm(dmgPath, { force: true });
@@ -55,15 +61,15 @@ async function patchUninstaller() {
   const uninstallEnd = source.indexOf("SectionEnd", uninstallStart);
   if (uninstallStart < 0 || uninstallEnd < 0) throw new Error("rdesktop NSIS script did not contain its uninstall section");
 
-  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace", "arj", "arc", "pak", "zoo", "ha", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha", "ice", "pi9"];
   const cleanup = [
-    ...[...extensions, ...legacyArchiveExtensions].map((extension) => `    DeleteRegKey HKCU "Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open"`),
+    ...[...archiveExtensions, ...legacyArchiveExtensions].map((extension) => `    DeleteRegKey HKCU "Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open"`),
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress"',
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here"',
     '    DeleteRegValue HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled"',
     '    RMDir /r "$LOCALAPPDATA\\zip233\\runtime"',
   ].join("\n") + "\n";
   source = source.slice(0, uninstallEnd) + cleanup + source.slice(uninstallEnd);
+  source = source.replace('    RMDir "$INSTDIR"', '    Delete "$INSTDIR\\zip233-cli.exe"\n    RMDir "$INSTDIR"');
   await writeFile(scriptPath, `\uFEFF${source}`, "utf8");
   await rm(installerPath, { force: true });
   run("makensis", [scriptPath]);
@@ -76,26 +82,54 @@ async function patchInstaller() {
   const installEnd = source.indexOf("SectionEnd", installStart);
   if (installStart < 0 || installEnd < 0) throw new Error("rdesktop NSIS script did not contain its install section");
 
-  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace", "arj", "arc", "pak", "zoo", "ha", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha", "ice", "pi9"];
   const writes = [
     '    WriteRegDWORD HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled" 1',
-    ...extensions.flatMap((extension) => {
+    ...archiveExtensions.flatMap((extension) => {
       const key = `Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open`;
       return [
         `    WriteRegStr HKCU "${key}" "MUIVerb" "使用 zip233 打开"`,
         `    WriteRegStr HKCU "${key}" "Icon" "$INSTDIR\\zip233.exe"`,
-        `    WriteRegStr HKCU "${key}\\command" "" "$"$INSTDIR\\zip233.exe$" open $"%1$""`,
+        `    WriteRegStr HKCU "${key}\\command" "" '"$INSTDIR\\zip233.exe" open "%1"'`,
       ];
     }),
     '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress" "MUIVerb" "压缩为 zip233.7z"',
     '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress" "Icon" "$INSTDIR\\zip233.exe"',
-    `    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress\\command" "" "$"$INSTDIR\\zip233.exe$" compress $"%1$""`,
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress\\command" "" '"$INSTDIR\\zip233.exe" compress "%1"'`,
     '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here" "MUIVerb" "在此处创建 zip233.7z"',
     '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here" "Icon" "$INSTDIR\\zip233.exe"',
-    `    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here\\command" "" "$"$INSTDIR\\zip233.exe$" compress-here $"%V$""`,
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here\\command" "" '"$INSTDIR\\zip233.exe" compress-here "%V"'`,
   ].join("\n") + "\n";
   source = source.slice(0, installEnd) + writes + source.slice(installEnd);
+  const cliFile = `    File /oname=zip233-cli.exe "${cliBinary}"\n`;
+  if (!source.includes('    File /oname=icon.ico')) throw new Error("rdesktop NSIS script did not contain its icon file entry");
+  source = source.replace('    File /oname=icon.ico', `${cliFile}    File /oname=icon.ico`);
   await writeFile(scriptPath, `\uFEFF${source}`, "utf8");
+}
+
+async function buildMsi() {
+  const packageInfo = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+  const template = await readFile(path.join(root, "installer", "zip233.wxs"), "utf8");
+  const shellEntries = archiveExtensions.map((extension) => {
+    const key = `Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open`;
+    return `      <RegistryKey Root="HKCU" Key="${key}">\n        <RegistryValue Name="MUIVerb" Type="string" Value="使用 zip233 打开" />\n        <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />\n        <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; open &quot;%1&quot;" /></RegistryKey>\n      </RegistryKey>`;
+  }).join("\n");
+  const oldEntries = legacyArchiveExtensions.map((extension) => {
+    const key = `Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open`;
+    return `      <RemoveRegistryKey Root="HKCU" Key="${key}" Action="removeOnInstall" />`;
+  }).join("\n");
+  const generated = template
+    .replace("<!-- ZIP233_ARCHIVE_ENTRIES -->", shellEntries)
+    .replace("<!-- ZIP233_LEGACY_CLEANUP -->", oldEntries);
+  const msiDir = path.join(root, "target", "release", "bundle", "msi");
+  await mkdir(msiDir, { recursive: true });
+  const sourcePath = path.join(msiDir, "zip233.wxs");
+  const outputPath = path.join(msiDir, `zip233-${packageInfo.version}-x64.msi`);
+  await writeFile(sourcePath, generated, "utf8");
+  run("wix", [
+    "build", "-arch", "x64", "-d", "AppExe=" + binary, "-d", "CliExe=" + cliBinary,
+    "-d", "IconFile=" + icon, "-d", "PackageVersion=" + packageInfo.version,
+    "-o", outputPath, sourcePath,
+  ]);
 }
 
 function stripBom(text) {

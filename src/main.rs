@@ -3,8 +3,6 @@
 mod embedded {
     include!(concat!(env!("OUT_DIR"), "/zip233_assets.rs"));
 }
-mod archive;
-
 use rdesktop_core::config::{AppConfig, WindowConfig};
 use rdesktop_core::ipc::{FnIpcHandler, IpcMessage, IpcResponse};
 use rdesktop_core::renderer::Renderer;
@@ -12,23 +10,7 @@ use rdesktop_webview::WebViewRenderer;
 use serde::Serialize;
 use serde_json::{json, Value};
 use std::sync::OnceLock;
-
-#[derive(Serialize)]
-struct ToolResult {
-    ok: bool,
-    code: Option<i32>,
-    stdout: String,
-    stderr: String,
-}
-
-#[derive(Serialize)]
-struct ArchiveItem {
-    name: String,
-    size: Option<u64>,
-    packed_size: Option<u64>,
-    is_directory: bool,
-    modified: Option<String>,
-}
+use zip233::{archive, update};
 
 #[derive(Serialize)]
 struct LaunchRequest {
@@ -206,6 +188,19 @@ fn dispatch_ipc(command: &str, payload: &Value) -> Result<Value, String> {
         "unregister_shell_integration" => {
             unregister_shell_integration()?;
             serde_json::to_value(shell_integration_status()).map_err(|e| e.to_string())
+        }
+        "check_updates" => {
+            serde_json::to_value(update::check_for_updates()?).map_err(|error| error.to_string())
+        }
+        "download_update" => {
+            serde_json::to_value(update::start_download()?).map_err(|error| error.to_string())
+        }
+        "update_download_status" => {
+            serde_json::to_value(update::current_download()).map_err(|error| error.to_string())
+        }
+        "install_update" => {
+            update::open_downloaded_update()?;
+            Ok(json!({ "ok": true }))
         }
         _ => Err(format!("未知的 zip233 操作：{command}")),
     }

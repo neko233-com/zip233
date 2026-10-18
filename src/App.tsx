@@ -7,6 +7,8 @@ import {
   ChevronRight,
   CircleHelp,
   Clock3,
+  Download,
+  ExternalLink,
   FileArchive,
   FilePlus2,
   FileText,
@@ -17,6 +19,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Plus,
+  RefreshCw,
   Search,
   Settings2,
   ShieldCheck,
@@ -26,7 +29,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
-import type { ArchiveItem, ArchiveRecord, LaunchRequest, ShellIntegrationStatus, ToolResult } from "./types";
+import type { ArchiveItem, ArchiveRecord, LaunchRequest, ShellIntegrationStatus, ToolResult, UpdateDownloadState, UpdateInfo } from "./types";
 
 type View = "files" | "recent" | "completed" | "settings";
 type FormatOption = {
@@ -39,7 +42,7 @@ type FormatOption = {
 
 const formats: FormatOption[] = [
   { id: "7z", label: "7Z", extension: "7z", family: "zip233 · 高压缩率", canPassword: true },
-  { id: "zip", label: "ZIP", extension: "zip", family: "跨平台通用" },
+  { id: "zip", label: "ZIP", extension: "zip", family: "跨平台通用 · AES-256", canPassword: true },
   { id: "tar", label: "TAR", extension: "tar", family: "无损归档" },
   { id: "tar.gz", label: "TAR.GZ", extension: "tar.gz", family: "Unix / Linux 常用" },
   { id: "tar.xz", label: "TAR.XZ", extension: "tar.xz", family: "高压缩率" },
@@ -50,6 +53,7 @@ const formats: FormatOption[] = [
 ];
 
 const storageKey = "zip233.recent.v1";
+const autoUpdateKey = "zip233.update.auto.v1";
 const isDesktop = hasDesktopBridge();
 
 function readRecent(): ArchiveRecord[] {
@@ -122,6 +126,10 @@ function App() {
   const [query, setQuery] = useState("");
   const [shellMenu, setShellMenu] = useState(false);
   const [menuLoading, setMenuLoading] = useState(false);
+  const [autoUpdates, setAutoUpdates] = useState(() => localStorage.getItem(autoUpdateKey) === "true");
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateDownload, setUpdateDownload] = useState<UpdateDownloadState>({ status: "idle", version: null, asset_name: null, downloaded_bytes: 0, total_bytes: null, message: "尚未下载更新。", file_path: null });
   const [extractPassword, setExtractPassword] = useState("");
   const dragDepth = useRef(0);
   const [dragging, setDragging] = useState(false);
@@ -316,6 +324,76 @@ function App() {
     }
   }, [notify]);
 
+  const checkUpdates = useCallback(async (automatic = false) => {
+    if (!isDesktop) {
+      if (!automatic) notify("更新检查需要运行 zip233 桌面版。", true);
+      return;
+    }
+    setCheckingUpdates(true);
+    try {
+      const info = await invoke<UpdateInfo>("check_updates");
+      setUpdateInfo(info);
+      if (automatic && autoUpdates && info.available && info.can_download) {
+        const state = await invoke<UpdateDownloadState>("download_update");
+        setUpdateDownload(state);
+      } else if (!automatic) {
+        notify(info.message, info.available && !info.can_download);
+      }
+    } catch (error) {
+      if (!automatic) notify(`检查更新失败：${String(error)}`, true);
+    } finally {
+      setCheckingUpdates(false);
+    }
+  }, [autoUpdates, notify]);
+
+  const beginUpdateDownload = useCallback(async () => {
+    try {
+      setUpdateDownload(await invoke<UpdateDownloadState>("download_update"));
+    } catch (error) {
+      notify(`下载更新失败：${String(error)}`, true);
+    }
+  }, [notify]);
+
+  const installUpdate = useCallback(async () => {
+    try {
+      await invoke<{ ok: boolean }>("install_update");
+      notify("安装程序已打开，请按提示完成更新。 ");
+    } catch (error) {
+      notify(`无法打开更新安装包：${String(error)}`, true);
+    }
+  }, [notify]);
+
+  const changeAutoUpdates = useCallback((enabled: boolean) => {
+    setAutoUpdates(enabled);
+    localStorage.setItem(autoUpdateKey, String(enabled));
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop || !autoUpdates) return;
+    const timer = window.setTimeout(() => void checkUpdates(true), 1500);
+    return () => window.clearTimeout(timer);
+  }, [autoUpdates, checkUpdates]);
+
+  useEffect(() => {
+    if (!isDesktop || updateDownload.status !== "downloading") return;
+    let active = true;
+    let timer = 0;
+    const poll = async () => {
+      try {
+        const state = await invoke<UpdateDownloadState>("update_download_status");
+        if (!active) return;
+        setUpdateDownload(state);
+        if (state.status === "downloading") timer = window.setTimeout(poll, 800);
+        else if (state.status === "ready") notify("更新下载完成，SHA-256 校验通过。 ");
+        else if (state.status === "error") notify(state.message, true);
+      } catch (error) {
+        if (active) setUpdateDownload((current) => ({ ...current, status: "error", message: String(error) }));
+      }
+    };
+    timer = window.setTimeout(poll, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [notify, updateDownload.status]);
+
   useEffect(() => {
     if (!isDesktop) return;
     void invoke<ShellIntegrationStatus>("shell_integration_status").then((status) => setShellMenu(status.enabled && status.healthy)).catch(() => undefined);
@@ -422,7 +500,19 @@ function App() {
 
         <div className="content-scroll">
           {view === "settings" ? (
-            <SettingsView shellMenu={shellMenu} loading={menuLoading} onToggle={changeShellMenu} />
+            <SettingsView
+              shellMenu={shellMenu}
+              loading={menuLoading}
+              onToggle={changeShellMenu}
+              autoUpdates={autoUpdates}
+              checkingUpdates={checkingUpdates}
+              updateInfo={updateInfo}
+              updateDownload={updateDownload}
+              onAutoUpdates={changeAutoUpdates}
+              onCheckUpdates={() => void checkUpdates(false)}
+              onDownloadUpdate={() => void beginUpdateDownload()}
+              onInstallUpdate={() => void installUpdate()}
+            />
           ) : (
             <>
               <section className="page-heading">
@@ -535,8 +625,35 @@ function NavButton({ active, icon, label, onClick }: { active: boolean; icon: Re
   return <button className={`nav-item ${active ? "active" : ""}`} onClick={onClick}>{icon}<span>{label}</span></button>;
 }
 
-function SettingsView({ shellMenu, loading, onToggle }: { shellMenu: boolean; loading: boolean; onToggle: (register: boolean) => void }) {
+function SettingsView({
+  shellMenu,
+  loading,
+  onToggle,
+  autoUpdates,
+  checkingUpdates,
+  updateInfo,
+  updateDownload,
+  onAutoUpdates,
+  onCheckUpdates,
+  onDownloadUpdate,
+  onInstallUpdate,
+}: {
+  shellMenu: boolean;
+  loading: boolean;
+  onToggle: (register: boolean) => void;
+  autoUpdates: boolean;
+  checkingUpdates: boolean;
+  updateInfo: UpdateInfo | null;
+  updateDownload: UpdateDownloadState;
+  onAutoUpdates: (enabled: boolean) => void;
+  onCheckUpdates: () => void;
+  onDownloadUpdate: () => void;
+  onInstallUpdate: () => void;
+}) {
   const windows = typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent);
+  const progress = updateDownload.total_bytes && updateDownload.total_bytes > 0
+    ? Math.min(100, Math.round(updateDownload.downloaded_bytes / updateDownload.total_bytes * 100))
+    : 0;
   return <section className="settings-page">
     <div className="settings-group">
       <div className="settings-group-heading"><h2>系统集成</h2><p>让 zip233 出现在 Windows 文件资源管理器的右键菜单中。</p></div>
@@ -556,14 +673,40 @@ function SettingsView({ shellMenu, loading, onToggle }: { shellMenu: boolean; lo
       <div className="setting-note"><ShieldCheck size={16} /><span>仅写入当前 Windows 用户的注册表，不需要管理员权限。每次启动会校验 zip233 菜单项，并修复丢失或指向旧安装路径的注册。</span></div>
     </div>
 
+    <div className="settings-group update-group">
+      <div className="settings-group-heading"><h2>软件更新</h2><p>通过 GitHub 稳定版 Release 获取 zip233 更新包。</p></div>
+      <div className="setting-row">
+        <span className="setting-icon"><RefreshCw size={18} /></span>
+        <div className="setting-copy"><strong>检查更新</strong><p>{updateInfo?.message ?? "自动更新默认关闭。你可以随时手动检查。"}</p></div>
+        <div className="setting-action">
+          <span className="setting-status"><i />当前版本 {updateInfo?.current_version ?? "—"}</span>
+          <button className="button button-secondary button-small" disabled={!isDesktop || checkingUpdates} onClick={onCheckUpdates}>
+            {checkingUpdates ? <LoaderCircle className="spin" size={15} /> : <RefreshCw size={14} />}{checkingUpdates ? "正在检查" : "检查更新"}
+          </button>
+        </div>
+      </div>
+      <label className="setting-note update-auto-toggle">
+        <input type="checkbox" checked={autoUpdates} onChange={(event) => onAutoUpdates(event.target.checked)} />
+        <span>开启自动检查与下载。发现更新后先下载并校验，安装仍需点击确认。</span>
+      </label>
+      {updateInfo?.available && updateInfo.can_download && updateDownload.status !== "downloading" && updateDownload.status !== "ready" && (
+        <div className="update-actions"><span>版本 {updateInfo.latest_version} · {updateInfo.asset_name}{updateInfo.asset_size ? ` · ${prettyBytes(updateInfo.asset_size)}` : ""}</span><button className="button button-primary button-small" onClick={onDownloadUpdate}><Download size={14} />下载并校验</button></div>
+      )}
+      {updateDownload.status === "downloading" && <div className="update-progress"><div><span>{updateDownload.message}</span><strong>{progress}%</strong></div><progress max={100} value={progress} /></div>}
+      {updateDownload.status === "ready" && <div className="update-actions"><span>{updateDownload.message}</span><button className="button button-primary button-small" onClick={onInstallUpdate}><Download size={14} />{windows ? "打开 MSI 安装" : "打开 DMG 安装"}</button></div>}
+      {updateDownload.status === "error" && <div className="update-progress update-error">{updateDownload.message}</div>}
+      {updateInfo?.release_url && <a className="update-release-link" href={updateInfo.release_url} target="_blank" rel="noreferrer">查看 GitHub Release <ExternalLink size={13} /></a>}
+      <div className="setting-note"><ShieldCheck size={16} /><span>版本信息只从 GitHub 官方 API 读取。下载优先直连 GitHub，失败后自动尝试镜像；每个安装包都必须通过官方 API 提供的 SHA-256 校验。</span></div>
+    </div>
+
     <div className="settings-group formats-group">
       <div className="settings-group-heading"><h2>压缩格式</h2><p>格式处理直接编译进 zip233，无需安装独立压缩程序。</p></div>
       <div className="format-matrix">
         <div><span>可创建</span><strong>7z · zip · tar · tar.gz · tar.xz · tar.bz2 · gz · bz2 · xz</strong></div>
-        <div><span>可读取与解压</span><strong>7z · zip · rar · tar · tar.gz · tar.bz2 · tar.xz · gz · bz2 · Z · LHA/LZH · ACE · ARJ · ARC/PAK · ZOO · UC2 · SQ/SQZ · ICE · Pack-Ice</strong></div>
-        <div><span>其他可读取</span><strong>arj · cpio · chm · lzh · rpm · vhd · vhdx · vmdk · vdi · qcow2 · udf · xar</strong></div>
+        <div><span>可读取与解压</span><strong>7z · zip · rar · tar · jar · tar.gz · tar.bz2 · tar.xz · gz · bz2 · Z · LHA/LZH · ACE · ARJ · ARC/PAK · ZOO · UC2 · SQ/SQZ · ICE · Pack-Ice</strong></div>
+        <div><span>其他可读取</span><strong>tgz · tbz/tbz2 · txz · taz · JAR · HA · UC2 · SQ/SQ2 · SQZ · HYP · ICE · Pack-Ice</strong></div>
       </div>
-      <p className="format-footnote">可读取格式覆盖面广；创建支持 ZIP、7z、TAR、GZIP、BZIP2 与 XZ 家族。RAR 与历史格式支持读取和提取。</p>
+      <p className="format-footnote">读取支持多种 ZIP 压缩算法和加密方式；可创建 ZIP AES-256 与 7z AES-256。RAR 与历史格式支持读取和提取。</p>
     </div>
 
     <div className="settings-group about-group">
@@ -595,7 +738,7 @@ function CreateDialog({ sources, name, format, level, password, busy, onChangeNa
           <label className="field"><span>压缩等级</span><select value={level} onChange={(event) => onChangeLevel(event.target.value)}><option value="1">快速</option><option value="5">标准</option><option value="7">较高</option><option value="9">最高</option></select></label>
         </div>
         <label className="field"><span>文件名</span><div className="input-with-suffix"><input value={name.replace(/\.[^.]+$/, "")} onChange={(event) => onChangeName(`${event.target.value}.${selected.extension}`)} placeholder="归档文件" /><span>.{selected.extension}</span></div></label>
-        {selected.canPassword && <label className="field"><span>密码 <em>可选</em></span><div className="input-icon-wrap"><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => onChangePassword(event.target.value)} placeholder="设置加密密码" autoComplete="new-password" /></div><small>7z 格式可加密文件名；压缩包中的文件将由密码保护。</small></label>}
+        {selected.canPassword && <label className="field"><span>密码 <em>可选</em></span><div className="input-icon-wrap"><LockKeyhole size={16} /><input type="password" value={password} onChange={(event) => onChangePassword(event.target.value)} placeholder="设置加密密码" autoComplete="new-password" /></div><small>{format === "7z" ? "AES-256 加密文件内容和文件名。" : "AES-256 加密文件内容；ZIP 规范会公开目录和文件名。"}</small></label>}
       </div>
       <footer className="dialog-footer"><button className="button button-secondary" onClick={onClose} disabled={busy}>取消</button><button className="button button-primary" onClick={onSubmit} disabled={busy || !sources.length}>{busy ? <LoaderCircle className="spin" size={16} /> : <Archive size={16} />}{busy ? "正在压缩…" : "选择保存位置并压缩"}</button></footer>
     </section>

@@ -15,8 +15,12 @@ use zip::CompressionMethod;
 
 pub const ARCHIVE_EXTENSIONS: &[&str] = &[
     "7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace",
-    "arj", "arc", "pak", "zoo", "ha", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha",
-    "ice", "pi9",
+    "arj", "arc", "pak", "zoo", "ha", "jar", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh",
+    "lha", "ice", "pi9",
+];
+
+pub const CREATE_FORMATS: &[&str] = &[
+    "7z", "zip", "tar", "tar.gz", "tar.xz", "tar.bz2", "gzip", "bzip2", "xz",
 ];
 
 pub fn supported_create_format(format: &str) -> bool {
@@ -143,11 +147,16 @@ pub fn create_archive(
     if matches!(format, "gzip" | "bzip2" | "xz") && paths.len() != 1 {
         return Err("GZIP、BZIP2 和 XZ 是单文件压缩格式，请只选择一个文件；压缩多个文件请选 TAR.GZ、TAR.BZ2 或 TAR.XZ。".into());
     }
+    if password.is_some_and(|value| !value.is_empty()) && !matches!(format, "7z" | "zip") {
+        return Err(
+            "当前只有 7z 和 ZIP 支持创建加密归档；TAR、GZIP、BZIP2 和 XZ 本身不提供加密。".into(),
+        );
+    }
 
     let target_path = Path::new(target);
     match format {
         "7z" => create_7z(paths, target_path, level, password)?,
-        "zip" => create_zip(paths, target_path, level)?,
+        "zip" => create_zip(paths, target_path, level, password)?,
         "tar" => create_tar(paths, target_path)?,
         "tar.gz" => create_tar_gzip(paths, target_path, level)?,
         "tar.bz2" => create_tar_bzip2(paths, target_path, level)?,
@@ -382,7 +391,12 @@ fn create_7z(
     writer.finish().map(|_| ()).map_err(format_error)
 }
 
-fn create_zip(paths: &[String], target: &Path, level: u32) -> Result<(), String> {
+fn create_zip(
+    paths: &[String],
+    target: &Path,
+    level: u32,
+    password: Option<&str>,
+) -> Result<(), String> {
     let entries = collect_sources(paths)?;
     let file = File::create(target).map_err(format_error)?;
     let mut writer = ZipWriter::new(file);
@@ -395,8 +409,12 @@ fn create_zip(paths: &[String], target: &Path, level: u32) -> Result<(), String>
                 .add_directory(format!("{}/", entry.name.trim_end_matches('/')), options)
                 .map_err(format_error)?;
         } else {
+            let file_options = match password.filter(|value| !value.is_empty()) {
+                Some(password) => options.with_aes_encryption(zip::AesMode::Aes256, password),
+                None => options,
+            };
             writer
-                .start_file(&entry.name, options)
+                .start_file(&entry.name, file_options)
                 .map_err(format_error)?;
             io::copy(
                 &mut File::open(entry.path).map_err(format_error)?,

@@ -129,6 +129,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .setting-status.status-on i { background: #43b47a; }
 .setting-note { display: flex; align-items: flex-start; gap: 7px; margin: 12px 2px 0; color: #8b97a8; font-size: 10px; line-height: 1.55; }
 .setting-note svg { flex: 0 0 auto; color: #43a879; }
+.update-auto-toggle { align-items: center; cursor: pointer; }
+.update-auto-toggle input { margin: 0 2px 0 0; accent-color: #2776df; }
+.update-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 16px 0 64px; color: #758297; font-size: 10px; }
+.update-actions > span { overflow-wrap: anywhere; }
+.update-progress { margin: 12px 16px 0 64px; color: #758297; font-size: 10px; }
+.update-progress > div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.update-progress progress { display: block; width: 100%; height: 6px; accent-color: #2776df; }
+.update-error { color: #b84c4c; }
+.update-release-link { display: inline-flex; align-items: center; gap: 5px; margin: 12px 16px 0 64px; color: #2774d7; font-size: 10px; text-decoration: none; }
+.update-release-link:hover { text-decoration: underline; }
 .format-matrix { display: grid; grid-template-columns: 1fr; margin-top: 16px; }
 .format-matrix > div { display: grid; grid-template-columns: 122px minmax(0, 1fr); align-items: center; min-height: 42px; border-top: 1px solid #f0f2f5; }
 .format-matrix span { color: #8894a5; font-size: 11px; }
