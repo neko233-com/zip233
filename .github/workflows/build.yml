@@ -38,6 +38,8 @@ jobs:
         run: cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 46b31da1c5b84441816fe79868658d38e88a1d5d rdesktop-cli
       - run: npm ci
       - run: npm run package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}

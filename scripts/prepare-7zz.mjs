@@ -30,10 +30,18 @@ try {
 } catch {}
 
 const scratch = await mkdtemp(path.join(tmpdir(), "zip233-engine-"));
+const releaseHeaders = {
+  "User-Agent": "zip233-build",
+  Accept: "application/vnd.github+json",
+};
+if (process.env.GITHUB_TOKEN) releaseHeaders.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
 const release = await fetch(`https://api.github.com/repos/ip7z/7zip/releases/tags/${tag}`, {
-  headers: { "User-Agent": "zip233-build", Accept: "application/vnd.github+json" },
+  headers: releaseHeaders,
 });
-if (!release.ok) throw new Error(`无法读取 7-Zip ${tag} 发布信息：HTTP ${release.status}`);
+if (!release.ok) {
+  const detail = (await release.text()).slice(0, 240);
+  throw new Error(`无法读取 7-Zip ${tag} 发布信息：HTTP ${release.status}${detail ? `：${detail}` : ""}`);
+}
 const metadata = await release.json();
 const assets = new Map(metadata.assets.map((asset) => [asset.name, asset.browser_download_url]));
 
