@@ -438,7 +438,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -542,7 +542,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1511,7 +1511,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2028,7 +2028,7 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 [[package]]
 name = "rdesktop-core"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=46b31da1c5b84441816fe79868658d38e88a1d5d#46b31da1c5b84441816fe79868658d38e88a1d5d"
 dependencies = [
  "anyhow",
  "core-graphics 0.24.0",
@@ -2047,7 +2047,7 @@ dependencies = [
 [[package]]
 name = "rdesktop-dev"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=46b31da1c5b84441816fe79868658d38e88a1d5d#46b31da1c5b84441816fe79868658d38e88a1d5d"
 dependencies = [
  "anyhow",
  "axum",
@@ -2069,7 +2069,7 @@ dependencies = [
 [[package]]
 name = "rdesktop-webview"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=46b31da1c5b84441816fe79868658d38e88a1d5d#46b31da1c5b84441816fe79868658d38e88a1d5d"
 dependencies = [
  "anyhow",
  "base64",
@@ -2157,7 +2157,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2552,7 +2552,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3145,7 +3145,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

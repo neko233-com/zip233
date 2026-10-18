@@ -25,7 +25,7 @@ try {
     stdio: "inherit",
   });
   if (bundle.error?.code === "ENOENT") {
-    throw new Error("找不到 rdesktop CLI。请先安装固定版本：cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 5c1136851d1e73fde834b66250bb4f6ce4b43384 rdesktop-cli");
+    throw new Error("找不到 rdesktop CLI。请先安装固定版本：cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 46b31da1c5b84441816fe79868658d38e88a1d5d rdesktop-cli");
   }
   if (bundle.status !== 0) throw new Error(`rdesktop bundle failed with status ${bundle.status}`);
 
