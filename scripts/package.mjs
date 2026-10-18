@@ -103,7 +103,9 @@ function stripBom(text) {
 
 async function createMacIcon() {
   const iconSource = path.join(root, "resources", "icons", "zip233-256.png");
-  const iconSet = await mkdtemp(path.join(tmpdir(), "zip233-iconset-"));
+  const iconSetTemp = await mkdtemp(path.join(tmpdir(), "zip233-iconset-"));
+  const iconSet = path.join(iconSetTemp, "zip233.iconset");
+  await mkdir(iconSet);
   const output = path.join(root, "resources", "icons", "zip233.icns");
   try {
     const entries = [
@@ -119,7 +121,7 @@ async function createMacIcon() {
     run("iconutil", ["-c", "icns", iconSet, "-o", output]);
     return output;
   } finally {
-    await rm(iconSet, { recursive: true, force: true });
+    await rm(iconSetTemp, { recursive: true, force: true });
   }
 }
 
