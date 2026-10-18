@@ -2,13 +2,9 @@ import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const viteUrl = "http://127.0.0.1:1420/";
-const prep = spawnSync(process.execPath, [path.join(root, "scripts", "prepare-7zz.mjs")], { cwd: root, stdio: "inherit" });
-if (prep.status !== 0) process.exit(prep.status ?? 1);
-
 let vite;
 let ownsVite = false;
 try {

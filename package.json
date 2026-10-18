@@ -6,9 +6,8 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "dev:native": "node scripts/dev-native.mjs",
-    "prepare:engine": "node scripts/prepare-7zz.mjs",
     "build:frontend": "tsc -b && vite build",
-    "build": "npm run prepare:engine && npm run build:frontend && cargo build --release",
+    "build": "npm run build:frontend && cargo build --release",
     "package": "npm run build && node scripts/package.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "rdesktop:info": "rdesktop info --path ."

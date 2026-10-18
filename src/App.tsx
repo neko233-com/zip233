@@ -39,7 +39,7 @@ type FormatOption = {
 
 const formats: FormatOption[] = [
   { id: "7z", label: "7Z", extension: "7z", family: "zip233 · 高压缩率", canPassword: true },
-  { id: "zip", label: "ZIP", extension: "zip", family: "跨平台通用", canPassword: true },
+  { id: "zip", label: "ZIP", extension: "zip", family: "跨平台通用" },
   { id: "tar", label: "TAR", extension: "tar", family: "无损归档" },
   { id: "tar.gz", label: "TAR.GZ", extension: "tar.gz", family: "Unix / Linux 常用" },
   { id: "tar.xz", label: "TAR.XZ", extension: "tar.xz", family: "高压缩率" },
@@ -47,7 +47,6 @@ const formats: FormatOption[] = [
   { id: "gzip", label: "GZIP", extension: "gz", family: "单文件压缩" },
   { id: "bzip2", label: "BZIP2", extension: "bz2", family: "单文件压缩" },
   { id: "xz", label: "XZ", extension: "xz", family: "单文件压缩" },
-  { id: "wim", label: "WIM", extension: "wim", family: "Windows 映像" },
 ];
 
 const storageKey = "zip233.recent.v1";
@@ -403,7 +402,7 @@ function App() {
           <NavButton active={view === "completed"} icon={<CheckCircle2 size={19} />} label="已完成" onClick={() => setView("completed")} />
         </nav>
         <div className="sidebar-bottom">
-          <div className="engine-line"><span className="engine-dot" />7-Zip 引擎已就绪</div>
+          <div className="engine-line"><span className="engine-dot" />内置 Rust 归档引擎已就绪</div>
           <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
             <Settings2 size={18} /><span>设置</span>
           </button>
@@ -488,7 +487,7 @@ function App() {
 
               {view === "files" && <section className="format-strip">
                 <div className="format-strip-title"><ShieldCheck size={16} /><span>广泛格式支持</span></div>
-                <div className="format-list"><span>7Z</span><span>ZIP</span><span>RAR</span><span>TAR</span><span>GZ</span><span>XZ</span><span>ISO</span><span>DMG</span><span>WIM</span><button onClick={() => setView("settings")}>全部格式<ChevronRight size={13} /></button></div>
+                <div className="format-list"><span>7Z</span><span>ZIP</span><span>RAR</span><span>TAR</span><span>GZ</span><span>XZ</span><span>ARJ</span><span>LZH</span><span>ACE</span><button onClick={() => setView("settings")}>全部格式<ChevronRight size={13} /></button></div>
               </section>}
             </>
           )}
@@ -558,18 +557,18 @@ function SettingsView({ shellMenu, loading, onToggle }: { shellMenu: boolean; lo
     </div>
 
     <div className="settings-group formats-group">
-      <div className="settings-group-heading"><h2>压缩格式</h2><p>官方 7-Zip 引擎提供广泛的读取和提取支持。</p></div>
+      <div className="settings-group-heading"><h2>压缩格式</h2><p>格式处理直接编译进 zip233，无需安装独立压缩程序。</p></div>
       <div className="format-matrix">
-        <div><span>可创建</span><strong>7z · zip · tar · tar.gz · tar.xz · tar.bz2 · gz · bz2 · xz · wim</strong></div>
-        <div><span>常见可提取</span><strong>7z · zip · rar · tar · gz · bz2 · xz · zst · iso · dmg · cab · wim</strong></div>
+        <div><span>可创建</span><strong>7z · zip · tar · tar.gz · tar.xz · tar.bz2 · gz · bz2 · xz</strong></div>
+        <div><span>可读取与解压</span><strong>7z · zip · rar · tar · tar.gz · tar.bz2 · tar.xz · gz · bz2 · Z · LHA/LZH · ACE · ARJ · ARC/PAK · ZOO · UC2 · SQ/SQZ · ICE · Pack-Ice</strong></div>
         <div><span>其他可读取</span><strong>arj · cpio · chm · lzh · rpm · vhd · vhdx · vmdk · vdi · qcow2 · udf · xar</strong></div>
       </div>
-      <p className="format-footnote">每种格式的加密、分卷和写入能力由其规范及归档引擎决定。部分格式只支持读取和提取。</p>
+      <p className="format-footnote">可读取格式覆盖面广；创建支持 ZIP、7z、TAR、GZIP、BZIP2 与 XZ 家族。RAR 与历史格式支持读取和提取。</p>
     </div>
 
     <div className="settings-group about-group">
       <div className="settings-group-heading"><h2>关于 zip233</h2></div>
-      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.0</span><span className="about-engine"><span className="engine-dot" />7-Zip 26.04</span></div>
+      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.0</span><span className="about-engine"><span className="engine-dot" />内置 Rust 引擎</span></div>
       <p className="format-footnote">跨 Windows 与 macOS 的桌面归档工具。归档在本机处理。</p>
     </div>
   </section>;

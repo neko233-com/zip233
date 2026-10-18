@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const legacyArchiveExtensions = ["zst", "lz", "lzma", "cab", "wim", "iso", "dmg", "rpm", "deb", "cpio", "chm", "vhd", "vhdx", "vmdk", "vdi", "qcow2", "udf", "xar", "apfs", "squashfs", "cramfs", "fat", "ntfs", "gpt", "mbr", "uefi", "ihex", "nsis", "msi", "hfs"];
 const windows = process.platform === "win32";
 const mac = process.platform === "darwin";
 if (!windows && !mac) throw new Error("zip233 packages Windows and macOS builds on their native hosts.");
@@ -54,9 +55,9 @@ async function patchUninstaller() {
   const uninstallEnd = source.indexOf("SectionEnd", uninstallStart);
   if (uninstallStart < 0 || uninstallEnd < 0) throw new Error("rdesktop NSIS script did not contain its uninstall section");
 
-  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "zst", "lz", "lzma", "cab", "wim", "iso", "dmg", "rpm", "deb", "cpio", "arj", "lzh", "chm", "vhd", "vhdx", "vmdk", "vdi", "qcow2", "udf", "xar", "z", "apfs", "squashfs", "cramfs", "fat", "ntfs", "gpt", "mbr", "uefi", "ihex", "nsis", "msi", "hfs"];
+  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace", "arj", "arc", "pak", "zoo", "ha", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha", "ice", "pi9"];
   const cleanup = [
-    ...extensions.map((extension) => `    DeleteRegKey HKCU "Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open"`),
+    ...[...extensions, ...legacyArchiveExtensions].map((extension) => `    DeleteRegKey HKCU "Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open"`),
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress"',
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here"',
     '    DeleteRegValue HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled"',
@@ -75,7 +76,7 @@ async function patchInstaller() {
   const installEnd = source.indexOf("SectionEnd", installStart);
   if (installStart < 0 || installEnd < 0) throw new Error("rdesktop NSIS script did not contain its install section");
 
-  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "zst", "lz", "lzma", "cab", "wim", "iso", "dmg", "rpm", "deb", "cpio", "arj", "lzh", "chm", "vhd", "vhdx", "vmdk", "vdi", "qcow2", "udf", "xar", "z", "apfs", "squashfs", "cramfs", "fat", "ntfs", "gpt", "mbr", "uefi", "ihex", "nsis", "msi", "hfs"];
+  const extensions = ["7z", "zip", "rar", "tar", "gz", "tgz", "bz2", "tbz", "tbz2", "xz", "txz", "Z", "taz", "ace", "arj", "arc", "pak", "zoo", "ha", "j", "uc2", "sq", "sq2", "qqq", "sqz", "hyp", "lzh", "lha", "ice", "pi9"];
   const writes = [
     '    WriteRegDWORD HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled" 1',
     ...extensions.flatMap((extension) => {
