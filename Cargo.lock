@@ -2028,7 +2028,7 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 [[package]]
 name = "rdesktop-core"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=503bb6aad97b03a19ee3590cd439ca8b737c40a3#503bb6aad97b03a19ee3590cd439ca8b737c40a3"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
 dependencies = [
  "anyhow",
  "core-graphics 0.24.0",
@@ -2047,7 +2047,7 @@ dependencies = [
 [[package]]
 name = "rdesktop-dev"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=503bb6aad97b03a19ee3590cd439ca8b737c40a3#503bb6aad97b03a19ee3590cd439ca8b737c40a3"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
 dependencies = [
  "anyhow",
  "axum",
@@ -2069,7 +2069,7 @@ dependencies = [
 [[package]]
 name = "rdesktop-webview"
 version = "0.1.15"
-source = "git+https://github.com/neko233-com/rdesktop.git?rev=503bb6aad97b03a19ee3590cd439ca8b737c40a3#503bb6aad97b03a19ee3590cd439ca8b737c40a3"
+source = "git+https://github.com/neko233-com/rdesktop.git?rev=5c1136851d1e73fde834b66250bb4f6ce4b43384#5c1136851d1e73fde834b66250bb4f6ce4b43384"
 dependencies = [
  "anyhow",
  "base64",

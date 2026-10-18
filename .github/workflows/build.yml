@@ -35,7 +35,7 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install nsis -y --no-progress
       - name: Install pinned rdesktop CLI
-        run: cargo install --git https://github.com/neko233-com/rdesktop.git --rev 503bb6aad97b03a19ee3590cd439ca8b737c40a3 rdesktop-cli
+        run: cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 5c1136851d1e73fde834b66250bb4f6ce4b43384 rdesktop-cli
       - run: npm ci
       - run: npm run package
       - uses: actions/upload-artifact@v4

@@ -25,7 +25,7 @@ npm run build               # frontend and native release binary
 The build downloads the official 7-Zip engine for the current target from the [ip7z/7zip release](https://github.com/ip7z/7zip/releases/tag/26.04), then embeds it in the binary. To create an installer/package, install the pinned rdesktop CLI and run `npm run package`:
 
 ```sh
-cargo install --git https://github.com/neko233-com/rdesktop.git --rev 503bb6aad97b03a19ee3590cd439ca8b737c40a3 rdesktop-cli
+cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 5c1136851d1e73fde834b66250bb4f6ce4b43384 rdesktop-cli
 npm run package
 ```
 

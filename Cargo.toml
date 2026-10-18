@@ -7,8 +7,8 @@ build = "build.rs"
 [dependencies]
 anyhow = "1"
 image = { version = "0.25.6", default-features = false, features = ["png"] }
-rdesktop-core = { version = "0.1.15", git = "https://github.com/neko233-com/rdesktop.git", rev = "503bb6aad97b03a19ee3590cd439ca8b737c40a3" }
-rdesktop-webview = { version = "0.1.15", git = "https://github.com/neko233-com/rdesktop.git", rev = "503bb6aad97b03a19ee3590cd439ca8b737c40a3" }
+rdesktop-core = { version = "0.1.15", git = "https://github.com/neko233-com/rdesktop.git", rev = "5c1136851d1e73fde834b66250bb4f6ce4b43384" }
+rdesktop-webview = { version = "0.1.15", git = "https://github.com/neko233-com/rdesktop.git", rev = "5c1136851d1e73fde834b66250bb4f6ce4b43384" }
 rfd = { version = "0.17.2", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
