@@ -23,6 +23,8 @@ npm install
 npm run dev                 # browser UI preview
 npm run dev:native          # rdesktop native window with Vite hot reload
 npm run build               # frontend, GUI, and CLI release binaries
+npm run build:frontend      # required before cargo test
+cargo test --lib            # round-trip all creator formats and check encryption/path safety
 ```
 
 To create installers and the macOS app bundle, install the pinned rdesktop CLI and run `npm run package`:

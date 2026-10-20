@@ -489,7 +489,7 @@ function App() {
           <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
             <Settings2 size={18} /><span>设置</span>
           </button>
-          <div className="sidebar-version">zip233 <span>0.1.2</span></div>
+          <div className="sidebar-version">zip233 <span>0.1.3</span></div>
         </div>
       </aside>
 
@@ -716,7 +716,7 @@ function SettingsView({
 
     <div className="settings-group about-group">
       <div className="settings-group-heading"><h2>关于 zip233</h2></div>
-      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.2</span><span className="about-engine"><span className="engine-dot" />内置 Rust 引擎</span></div>
+      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.3</span><span className="about-engine"><span className="engine-dot" />内置 Rust 引擎</span></div>
       <p className="format-footnote">跨 Windows 与 macOS 的桌面归档工具。归档在本机处理。</p>
     </div>
   </section>;

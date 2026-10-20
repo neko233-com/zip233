@@ -1,7 +1,7 @@
 [app]
 identifier = "com.neko233.zip233"
 name = "zip233"
-version = "0.1.0"
+version = "0.1.3"
 
 [renderer]
 kind = "webview"

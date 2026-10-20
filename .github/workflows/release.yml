@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - uses: ilammy/msvc-dev-cmd@v1
@@ -26,6 +26,11 @@ jobs:
         run: |
           choco install nsis --yes --no-progress
           dotnet tool install --global wix
+          $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS'
+          if (-not (Test-Path (Join-Path $nsis 'makensis.exe'))) {
+            throw "makensis.exe was not found under $nsis"
+          }
+          $nsis | Out-File -FilePath $env:GITHUB_PATH -Append
           "${env:USERPROFILE}\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Install pinned rdesktop bundler
         shell: pwsh
@@ -34,6 +39,9 @@ jobs:
         shell: pwsh
         run: |
           npm ci
+          npm run build:frontend
+          cargo fmt --all -- --check
+          cargo test --lib
           npm run package
       - name: Stage Windows installers
         shell: pwsh
@@ -53,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - name: Install pinned rdesktop bundler
@@ -61,6 +69,9 @@ jobs:
       - name: Build macOS app and disk image
         run: |
           npm ci
+          npm run build:frontend
+          cargo fmt --all -- --check
+          cargo test --lib
           npm run package
       - name: Stage macOS disk image
         run: |

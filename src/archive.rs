@@ -9,7 +9,7 @@ use std::io::{self, BufReader, Write};
 use std::path::{Component, Path, PathBuf};
 use tar::Builder as TarBuilder;
 use tempfile::TempDir;
-use unarc_rs::unified::{ArchiveFormat, ArchiveOptions, UnifiedArchive};
+use unarc_rs::unified::{ArchiveEntryKind, ArchiveFormat, ArchiveOptions, UnifiedArchive};
 use zip::write::{SimpleFileOptions, ZipWriter};
 use zip::CompressionMethod;
 
@@ -51,12 +51,13 @@ pub fn list_archive(path: &str, password: Option<&str>) -> Result<Vec<ArchiveIte
     while let Some(entry) = opened.archive.next_entry().map_err(format_error)? {
         let name = entry.name().to_string();
         items.push(ArchiveItem {
-            is_directory: name.ends_with('/') || name.ends_with('\\'),
+            is_directory: entry.is_directory(),
             name,
             size: Some(entry.original_size()),
             packed_size: Some(entry.compressed_size()),
             modified: None,
         });
+        opened.archive.skip(&entry).map_err(format_error)?;
     }
     Ok(items)
 }
@@ -110,10 +111,17 @@ pub fn extract_archive(
     let mut extracted = 0_u64;
     while let Some(entry) = opened.archive.next_entry().map_err(format_error)? {
         let name = entry.name().to_string();
-        let is_directory = name.ends_with('/') || name.ends_with('\\');
+        let is_directory = entry.is_directory();
+        if !matches!(
+            entry.kind(),
+            ArchiveEntryKind::File | ArchiveEntryKind::Directory
+        ) {
+            return Err(format!("不支持安全解压归档条目：{name}"));
+        }
         let relative = safe_relative_path(&name)?;
         let target = prepare_output_path(&canonical_root, &relative, is_directory)?;
         if is_directory {
+            opened.archive.skip(&entry).map_err(format_error)?;
             continue;
         }
         let mut output = File::create(target).map_err(format_error)?;
@@ -379,6 +387,7 @@ fn create_7z(
     let mut writer = ArchiveWriter::create(target).map_err(format_error)?;
     let mut methods = Vec::new();
     if let Some(password) = password.filter(|value| !value.is_empty()) {
+        writer.set_encrypt_header(true);
         methods.push(sevenz_rust2::encoder_options::AesEncoderOptions::new(password.into()).into());
     }
     methods.push(Lzma2Options::from_level(level).into());
@@ -553,4 +562,224 @@ fn failure(message: String) -> ToolResult {
 
 fn format_error(error: impl std::fmt::Display) -> String {
     error.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use zip::write::{SimpleFileOptions, ZipWriter};
+
+    const CONTENT: &[u8] = b"zip233 archive round-trip test\n";
+
+    fn create_fixture(root: &Path) -> (PathBuf, PathBuf) {
+        let source = root.join("sample");
+        let nested = source.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::write(nested.join("payload.txt"), CONTENT).unwrap();
+        (source, nested.join("payload.txt"))
+    }
+
+    fn assert_content_exists(root: &Path) {
+        fn walk(path: &Path) -> bool {
+            let Ok(entries) = fs::read_dir(path) else {
+                return false;
+            };
+            entries.flatten().any(|entry| {
+                let path = entry.path();
+                if path.is_dir() {
+                    walk(&path)
+                } else {
+                    fs::read(path).is_ok_and(|contents| contents == CONTENT)
+                }
+            })
+        }
+        assert!(
+            walk(root),
+            "extracted content was not found under {}",
+            root.display()
+        );
+    }
+
+    #[test]
+    fn every_creator_round_trips_through_reader_and_extractor() {
+        for format in CREATE_FORMATS {
+            let temp = tempfile::tempdir().unwrap();
+            let (source, single_file) = create_fixture(temp.path());
+            let single_stream = matches!(*format, "gzip" | "bzip2" | "xz");
+            let sources = if single_stream {
+                vec![single_file]
+            } else {
+                vec![source]
+            };
+            let suffix = match *format {
+                "tar.gz" => "tar.gz",
+                "tar.xz" => "tar.xz",
+                "tar.bz2" => "tar.bz2",
+                "gzip" => "gz",
+                "bzip2" => "bz2",
+                value => value,
+            };
+            let archive_path = temp.path().join(format!("roundtrip.{suffix}"));
+            let source_paths = sources
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect::<Vec<_>>();
+
+            let created = create_archive(
+                &source_paths,
+                &archive_path.to_string_lossy(),
+                format,
+                "1",
+                None,
+            )
+            .unwrap_or_else(|error| panic!("create {format}: {error}"));
+            assert!(created.ok, "create {format}: {}", created.stderr);
+
+            let listed = list_archive(&archive_path.to_string_lossy(), None)
+                .unwrap_or_else(|error| panic!("list {format}: {error}"));
+            assert!(!listed.is_empty(), "list {format} returned no entries");
+            if matches!(*format, "zip" | "tar" | "tar.gz" | "tar.xz" | "tar.bz2") {
+                assert!(
+                    listed.iter().any(|entry| entry.is_directory),
+                    "{format} did not preserve directory entries"
+                );
+            }
+
+            let checked = test_archive(&archive_path.to_string_lossy(), None)
+                .unwrap_or_else(|error| panic!("test {format}: {error}"));
+            assert!(checked.ok, "test {format}: {}", checked.stderr);
+
+            let destination = temp.path().join("extracted");
+            let extracted = extract_archive(
+                &archive_path.to_string_lossy(),
+                &destination.to_string_lossy(),
+                None,
+            )
+            .unwrap_or_else(|error| panic!("extract {format}: {error}"));
+            assert!(extracted.ok, "extract {format}: {}", extracted.stderr);
+            assert_content_exists(&destination);
+        }
+    }
+
+    #[test]
+    fn encrypted_7z_and_zip_round_trip_and_reject_wrong_password() {
+        let password = "correct horse battery staple";
+        for format in ["7z", "zip"] {
+            let temp = tempfile::tempdir().unwrap();
+            let (source, _) = create_fixture(temp.path());
+            let target = temp.path().join(format!("encrypted.{format}"));
+            let result = create_archive(
+                &[source.to_string_lossy().into_owned()],
+                &target.to_string_lossy(),
+                format,
+                "1",
+                Some(password),
+            )
+            .unwrap_or_else(|error| panic!("create encrypted {format}: {error}"));
+            assert!(result.ok, "create encrypted {format}: {}", result.stderr);
+
+            let listed = list_archive(&target.to_string_lossy(), Some(password))
+                .unwrap_or_else(|error| panic!("list encrypted {format}: {error}"));
+            assert!(!listed.is_empty(), "encrypted {format} returned no entries");
+            if format == "7z" {
+                assert!(
+                    list_archive(&target.to_string_lossy(), None).is_err(),
+                    "encrypted 7z exposed its file names without a password"
+                );
+            }
+            let checked = test_archive(&target.to_string_lossy(), Some(password))
+                .unwrap_or_else(|error| panic!("test encrypted {format}: {error}"));
+            assert!(checked.ok, "test encrypted {format}: {}", checked.stderr);
+
+            let destination = temp.path().join("decrypted");
+            let decrypted = extract_archive(
+                &target.to_string_lossy(),
+                &destination.to_string_lossy(),
+                Some(password),
+            )
+            .unwrap_or_else(|error| panic!("extract encrypted {format}: {error}"));
+            assert!(
+                decrypted.ok,
+                "extract encrypted {format}: {}",
+                decrypted.stderr
+            );
+            assert_content_exists(&destination);
+
+            match test_archive(&target.to_string_lossy(), Some("wrong password")) {
+                Ok(result) => assert!(!result.ok, "{format} accepted a wrong password"),
+                Err(_) => {}
+            }
+        }
+    }
+
+    #[test]
+    fn rejects_zip_path_traversal_without_writing_outside_output_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive_path = temp.path().join("malicious.zip");
+        let file = File::create(&archive_path).unwrap();
+        let mut writer = ZipWriter::new(file);
+        writer
+            .start_file("../escaped.txt", SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(CONTENT).unwrap();
+        writer.finish().unwrap();
+
+        let output = temp.path().join("output");
+        let result = extract_archive(
+            &archive_path.to_string_lossy(),
+            &output.to_string_lossy(),
+            None,
+        );
+
+        assert!(result.is_err());
+        assert!(!temp.path().join("escaped.txt").exists());
+    }
+
+    #[test]
+    fn refuses_to_create_symlinks_during_tar_extraction() {
+        let temp = tempfile::tempdir().unwrap();
+        let archive_path = temp.path().join("symlink.tar");
+        let file = File::create(&archive_path).unwrap();
+        let mut builder = TarBuilder::new(file);
+        let mut header = tar::Header::new_ustar();
+        header.set_entry_type(tar::EntryType::Symlink);
+        header.set_path("link").unwrap();
+        header.set_link_name("../escaped.txt").unwrap();
+        header.set_size(0);
+        header.set_mode(0o777);
+        header.set_cksum();
+        builder.append(&header, io::empty()).unwrap();
+        builder.finish().unwrap();
+
+        let output = temp.path().join("output");
+        let result = extract_archive(
+            &archive_path.to_string_lossy(),
+            &output.to_string_lossy(),
+            None,
+        );
+
+        assert!(result.is_err());
+        assert!(!output.join("link").exists());
+        assert!(!temp.path().join("escaped.txt").exists());
+    }
+
+    #[test]
+    fn rejects_unsafe_archive_paths_and_duplicate_zip_entries() {
+        for path in ["../escape", "..\\escape", "/absolute", "C:\\escape"] {
+            assert!(safe_relative_path(path).is_err(), "accepted {path:?}");
+        }
+
+        let temp = tempfile::tempdir().unwrap();
+        let (source, _) = create_fixture(temp.path());
+        let target = temp.path().join("duplicate.zip");
+        let sources = [
+            source.to_string_lossy().into_owned(),
+            source.to_string_lossy().into_owned(),
+        ];
+        let error = create_archive(&sources, &target.to_string_lossy(), "zip", "5", None)
+            .err()
+            .expect("duplicate source paths should be rejected");
+        assert!(error.contains("重复归档路径"));
+    }
 }

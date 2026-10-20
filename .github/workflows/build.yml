@@ -18,10 +18,10 @@ jobs:
         include:
           - os: windows-latest
             artifact: zip233-windows-x64
-            files: target/release/bundle/nsis/zip233-0.1.2-setup.exe
+            files: target/release/bundle/nsis/*.exe
           - os: macos-latest
             artifact: zip233-macos
-            files: target/release/bundle/macos/zip233-0.1.2.dmg
+            files: target/release/bundle/macos/*.dmg
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -31,12 +31,26 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Install NSIS
+      - run: npm ci
+      - run: npm run build:frontend
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test archive operations
+        run: cargo test --lib
+      - name: Install Windows packaging tools
         if: runner.os == 'Windows'
-        run: choco install nsis -y --no-progress
+        shell: pwsh
+        run: |
+          choco install nsis --yes --no-progress
+          dotnet tool install --global wix
+          $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS'
+          if (-not (Test-Path (Join-Path $nsis 'makensis.exe'))) {
+            throw "makensis.exe was not found under $nsis"
+          }
+          $nsis | Out-File -FilePath $env:GITHUB_PATH -Append
+          (Join-Path $env:USERPROFILE '.dotnet\tools') | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Install pinned rdesktop CLI
         run: cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 46b31da1c5b84441816fe79868658d38e88a1d5d rdesktop-cli
-      - run: npm ci
       - run: npm run package
       - uses: actions/upload-artifact@v4
         with:
