@@ -9,6 +9,8 @@ use rdesktop_core::renderer::Renderer;
 use rdesktop_webview::WebViewRenderer;
 use serde::Serialize;
 use serde_json::{json, Value};
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use zip233::{archive, update};
 
@@ -27,6 +29,14 @@ struct ShellIntegrationStatus {
 static LAUNCH_REQUEST: OnceLock<Option<LaunchRequest>> = OnceLock::new();
 
 fn main() -> anyhow::Result<()> {
+    if let Some(result) = run_direct_shell_command() {
+        if let Err(error) = result {
+            report_shell_compression_error(&error);
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
     tracing_subscriber::fmt::init();
     repair_shell_integration_on_startup();
 
@@ -249,6 +259,141 @@ fn parse_launch_request() -> Option<LaunchRequest> {
     Some(LaunchRequest { action, path })
 }
 
+fn run_direct_shell_command() -> Option<Result<(), String>> {
+    let mut args = std::env::args_os().skip(1);
+    let action = args.next()?.to_string_lossy().into_owned();
+    match action.as_str() {
+        "compress-zip" => Some(match args.next() {
+            Some(path) => compress_selected_folder(Path::new(&path)),
+            None => Err("没有收到要压缩的文件夹路径。".into()),
+        }),
+        "compress-zip-here" => Some(match args.next() {
+            Some(path) => compress_directory_contents(Path::new(&path)),
+            None => Err("没有收到当前文件夹路径。".into()),
+        }),
+        _ => None,
+    }
+}
+
+fn compress_selected_folder(path: &Path) -> Result<(), String> {
+    let directory = canonical_directory(path)?;
+    let parent = directory
+        .parent()
+        .ok_or_else(|| "无法确定所选文件夹的上级目录。".to_string())?;
+    let name = directory
+        .file_name()
+        .map(|value| value.to_string_lossy().into_owned())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "磁盘内容".into());
+    let target = reserve_zip_path(parent, &name)?;
+    create_direct_zip(&[directory], &target)
+}
+
+fn compress_directory_contents(path: &Path) -> Result<(), String> {
+    let directory = canonical_directory(path)?;
+    let mut sources = fs::read_dir(&directory)
+        .map_err(|error| format!("无法读取当前文件夹：{error}"))?
+        .map(|entry| {
+            entry
+                .map(|entry| entry.path())
+                .map_err(|error| error.to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    sources.sort();
+    if sources.is_empty() {
+        return Err("当前文件夹为空，没有可压缩的内容。".into());
+    }
+    let name = directory
+        .file_name()
+        .map(|value| value.to_string_lossy().into_owned())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "文件夹内容".into());
+    let target = reserve_zip_path(&directory, &name)?;
+    create_direct_zip(&sources, &target)
+}
+
+fn canonical_directory(path: &Path) -> Result<PathBuf, String> {
+    let path = fs::canonicalize(path)
+        .map_err(|error| format!("无法访问文件夹 {}：{error}", path.display()))?;
+    let metadata = fs::metadata(&path).map_err(|error| format!("无法读取文件夹信息：{error}"))?;
+    if !metadata.is_dir() {
+        return Err(format!("{} 不是文件夹。", path.display()));
+    }
+    Ok(path)
+}
+
+fn reserve_zip_path(directory: &Path, name: &str) -> Result<PathBuf, String> {
+    for suffix in 1..=9999_u32 {
+        let file_name = if suffix == 1 {
+            format!("{name}.zip")
+        } else {
+            format!("{name} ({suffix}).zip")
+        };
+        let candidate = directory.join(file_name);
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(_) => return Ok(candidate),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => {
+                return Err(format!(
+                    "无法创建 ZIP 文件 {}：{error}",
+                    candidate.display()
+                ));
+            }
+        }
+    }
+    Err("同名 ZIP 文件太多，无法生成新的归档名称。".into())
+}
+
+fn create_direct_zip(sources: &[PathBuf], target: &Path) -> Result<(), String> {
+    let sources = sources
+        .iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    let target = target.to_string_lossy().into_owned();
+    match archive::create_archive(&sources, &target, "zip", "5", None) {
+        Ok(result) if result.ok => Ok(()),
+        Ok(result) => {
+            let message = [result.stderr.trim(), result.stdout.trim()]
+                .into_iter()
+                .find(|value| !value.is_empty())
+                .unwrap_or("压缩没有完成。")
+                .to_string();
+            let _ = fs::remove_file(&target);
+            Err(message)
+        }
+        Err(error) => {
+            let _ = fs::remove_file(&target);
+            Err(error)
+        }
+    }
+}
+
+fn report_shell_compression_error(message: &str) {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+        let message = message
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect::<Vec<_>>();
+        let title = "zip233 压缩失败\0".encode_utf16().collect::<Vec<_>>();
+        unsafe {
+            MessageBoxW(
+                std::ptr::null_mut(),
+                message.as_ptr(),
+                title.as_ptr(),
+                MB_OK | MB_ICONERROR,
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    eprintln!("zip233 压缩失败：{message}");
+}
+
 fn repair_shell_integration_on_startup() {
     #[cfg(windows)]
     if windows_shell::is_enabled() {
@@ -301,8 +446,13 @@ mod windows_shell {
     const SETTINGS_KEY: &str = "Software\\neko233\\zip233";
     const ENABLED_VALUE: &str = "ShellIntegrationEnabled";
     const ARCHIVE_VERB: &str = "SystemFileAssociations\\{}\\shell\\zip233.open";
-    const DIRECTORY_VERB: &str = r"Directory\shell\zip233.compress";
-    const BACKGROUND_VERB: &str = r"Directory\Background\shell\zip233.compress-here";
+    const DIRECTORY_VERB: &str = r"Directory\shell\zip233.compress-zip";
+    const DIRECTORY_ADVANCED_VERB: &str = r"Directory\shell\zip233.compress-advanced";
+    const BACKGROUND_VERB: &str = r"Directory\Background\shell\zip233.compress-zip-here";
+    const BACKGROUND_ADVANCED_VERB: &str =
+        r"Directory\Background\shell\zip233.compress-advanced-here";
+    const LEGACY_DIRECTORY_VERB: &str = r"Directory\shell\zip233.compress";
+    const LEGACY_BACKGROUND_VERB: &str = r"Directory\Background\shell\zip233.compress-here";
 
     fn classes_key() -> Result<RegKey, String> {
         RegKey::predef(HKEY_CURRENT_USER)
@@ -377,6 +527,8 @@ mod windows_shell {
             let relative = ARCHIVE_VERB.replace("{}", &format!(".{extension}"));
             remove_owned_key(&classes, &relative)?;
         }
+        remove_owned_key(&classes, LEGACY_DIRECTORY_VERB)?;
+        remove_owned_key(&classes, LEGACY_BACKGROUND_VERB)?;
         for extension in ARCHIVE_EXTENSIONS {
             let relative = ARCHIVE_VERB.replace("{}", &format!(".{extension}"));
             let command_line = format!("{quoted_exe} open \"%1\"");
@@ -385,15 +537,29 @@ mod windows_shell {
         set_verb(
             &classes,
             DIRECTORY_VERB,
-            "压缩为 zip233.7z",
-            &format!("{quoted_exe} compress \"%1\""),
+            "直接压缩为 ZIP",
+            &format!("{quoted_exe} compress-zip \"%1\""),
+            &exe,
+        )?;
+        set_verb(
+            &classes,
+            DIRECTORY_ADVANCED_VERB,
+            "zip233 高级压缩…",
+            &format!("{quoted_exe} compress-advanced \"%1\""),
             &exe,
         )?;
         set_verb(
             &classes,
             BACKGROUND_VERB,
-            "在此处创建 zip233.7z",
-            &format!("{quoted_exe} compress-here \"%V\""),
+            "直接压缩为 ZIP",
+            &format!("{quoted_exe} compress-zip-here \"%V\""),
+            &exe,
+        )?;
+        set_verb(
+            &classes,
+            BACKGROUND_ADVANCED_VERB,
+            "zip233 高级压缩…",
+            &format!("{quoted_exe} compress-advanced-here \"%V\""),
             &exe,
         )
     }
@@ -431,12 +597,22 @@ mod windows_shell {
         verb_matches(
             &classes,
             DIRECTORY_VERB,
-            &format!("{quoted_exe} compress \"%1\""),
+            &format!("{quoted_exe} compress-zip \"%1\""),
+            &exe,
+        ) && verb_matches(
+            &classes,
+            DIRECTORY_ADVANCED_VERB,
+            &format!("{quoted_exe} compress-advanced \"%1\""),
             &exe,
         ) && verb_matches(
             &classes,
             BACKGROUND_VERB,
-            &format!("{quoted_exe} compress-here \"%V\""),
+            &format!("{quoted_exe} compress-zip-here \"%V\""),
+            &exe,
+        ) && verb_matches(
+            &classes,
+            BACKGROUND_ADVANCED_VERB,
+            &format!("{quoted_exe} compress-advanced-here \"%V\""),
             &exe,
         )
     }
@@ -482,7 +658,11 @@ mod windows_shell {
             remove_owned_key(&classes, &relative)?;
         }
         remove_owned_key(&classes, DIRECTORY_VERB)?;
+        remove_owned_key(&classes, DIRECTORY_ADVANCED_VERB)?;
         remove_owned_key(&classes, BACKGROUND_VERB)?;
+        remove_owned_key(&classes, BACKGROUND_ADVANCED_VERB)?;
+        remove_owned_key(&classes, LEGACY_DIRECTORY_VERB)?;
+        remove_owned_key(&classes, LEGACY_BACKGROUND_VERB)?;
         write_enabled(false)
     }
 }

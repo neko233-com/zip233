@@ -399,7 +399,12 @@ function App() {
     void invoke<ShellIntegrationStatus>("shell_integration_status").then((status) => setShellMenu(status.enabled && status.healthy)).catch(() => undefined);
     void invoke<LaunchRequest | null>("get_launch_request").then((request) => {
       if (!request?.path) return;
-      if (request.action === "compress" || request.action === "compress-here") addSourcePaths([request.path]);
+      if (
+        request.action === "compress-advanced" ||
+        request.action === "compress-advanced-here" ||
+        request.action === "compress" ||
+        request.action === "compress-here"
+      ) addSourcePaths([request.path]);
       else if (request.action === "open" || request.action === "extract") void openArchive(request.path);
     }).catch(() => undefined);
     const previousPush = window.__RDESKTOP_PUSH__;
@@ -484,7 +489,7 @@ function App() {
           <button className={`nav-item ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")}>
             <Settings2 size={18} /><span>设置</span>
           </button>
-          <div className="sidebar-version">zip233 <span>0.1.0</span></div>
+          <div className="sidebar-version">zip233 <span>0.1.2</span></div>
         </div>
       </aside>
 
@@ -659,7 +664,7 @@ function SettingsView({
       <div className="settings-group-heading"><h2>系统集成</h2><p>让 zip233 出现在 Windows 文件资源管理器的右键菜单中。</p></div>
       <div className="setting-row">
         <span className="setting-icon"><ListFilter size={18} /></span>
-        <div className="setting-copy"><strong>Windows 右键菜单</strong><p>{windows ? "添加打开归档、压缩文件夹和在当前目录压缩的快捷操作。" : "此功能仅适用于 Windows。"}</p></div>
+        <div className="setting-copy"><strong>Windows 右键菜单</strong><p>{windows ? "提供直接压缩为 ZIP（不打开窗口）和 zip233 高级压缩，并可从右键菜单打开归档。" : "此功能仅适用于 Windows。"}</p></div>
         <div className="setting-action">
           <span className={`setting-status ${shellMenu ? "status-on" : ""}`}><i />{shellMenu ? "已注册 · 自修复开启" : "未注册"}</span>
           <div className="setting-buttons">
@@ -711,7 +716,7 @@ function SettingsView({
 
     <div className="settings-group about-group">
       <div className="settings-group-heading"><h2>关于 zip233</h2></div>
-      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.0</span><span className="about-engine"><span className="engine-dot" />内置 Rust 引擎</span></div>
+      <div className="about-row"><span className="about-brand"><Archive size={18} />zip233</span><span>0.1.2</span><span className="about-engine"><span className="engine-dot" />内置 Rust 引擎</span></div>
       <p className="format-footnote">跨 Windows 与 macOS 的桌面归档工具。归档在本机处理。</p>
     </div>
   </section>;

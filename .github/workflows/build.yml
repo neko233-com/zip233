@@ -18,10 +18,10 @@ jobs:
         include:
           - os: windows-latest
             artifact: zip233-windows-x64
-            files: target/release/bundle/nsis/zip233-0.1.0-setup.exe
+            files: target/release/bundle/nsis/zip233-0.1.2-setup.exe
           - os: macos-latest
             artifact: zip233-macos
-            files: target/release/bundle/macos/zip233-0.1.0.dmg
+            files: target/release/bundle/macos/zip233-0.1.2.dmg
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

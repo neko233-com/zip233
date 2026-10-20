@@ -10,7 +10,7 @@
 - Read encrypted 7z, ZIP, RAR, and encrypted legacy formats supported by the reader. Create AES-256 encrypted 7z and ZIP archives. ZIP encryption protects file contents; ZIP names remain visible by format design. 7z can encrypt names.
 - ZIP reading includes Deflate, Deflate64, BZip2, Zstandard, LZMA, PPMd, and XZ compression methods.
 - Extraction rejects absolute paths and directory traversal entries.
-- Windows installs include idempotent Explorer actions for opening archives and compressing folders, with startup self-repair.
+- Windows installs include idempotent Explorer actions: direct ZIP compression without opening the UI, advanced compression in zip233, and opening archives. Startup self-repairs the registrations.
 
 Format support is explicit. No implementation can promise support for every proprietary or undocumented format. Specialized disk images and future formats are not currently claimed as supported.
 
@@ -58,7 +58,7 @@ In **Settings → Software updates**, use **Check for updates** to check manuall
 
 ## Windows Explorer menu
 
-In **Settings → Windows right-click menu**, choose **Register and enable self-repair**. Repeating this action safely updates zip233-owned registry values. When enabled, startup repairs missing entries or entries that point at a previous install location. Choose **Remove** to delete those menu items and turn off self-repair.
+In **Settings → Windows right-click menu**, choose **Register and enable self-repair**. Folder and directory-background menus each expose two compression actions: **Directly compress to ZIP** runs silently and creates a non-overwriting ZIP beside the selected folder or inside the current directory; **zip233 Advanced Compression** opens the app with the folder selected. Repeating registration safely updates zip233-owned registry values. When enabled, startup repairs missing entries or entries that point at a previous install location. Choose **Remove** to delete those menu items and turn off self-repair.
 
 ## Built-in archive support
 

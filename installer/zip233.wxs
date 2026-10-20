@@ -37,15 +37,27 @@
       <Component Id="ShellIntegration" Guid="*">
         <RegistryValue Root="HKCU" Key="Software\neko233\zip233" Name="ShellIntegrationEnabled" Type="integer" Value="1" KeyPath="yes" />
         <!-- ZIP233_ARCHIVE_ENTRIES -->
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress">
-          <RegistryValue Name="MUIVerb" Type="string" Value="压缩为 zip233.7z" />
+        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress" Action="removeOnInstall" />
+        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-here" Action="removeOnInstall" />
+        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress-zip">
+          <RegistryValue Name="MUIVerb" Type="string" Value="直接压缩为 ZIP" />
           <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress &quot;%1&quot;" /></RegistryKey>
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-zip &quot;%1&quot;" /></RegistryKey>
         </RegistryKey>
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-here">
-          <RegistryValue Name="MUIVerb" Type="string" Value="在此处创建 zip233.7z" />
+        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress-advanced">
+          <RegistryValue Name="MUIVerb" Type="string" Value="zip233 高级压缩…" />
           <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-here &quot;%V&quot;" /></RegistryKey>
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-advanced &quot;%1&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-zip-here">
+          <RegistryValue Name="MUIVerb" Type="string" Value="直接压缩为 ZIP" />
+          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-zip-here &quot;%V&quot;" /></RegistryKey>
+        </RegistryKey>
+        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-advanced-here">
+          <RegistryValue Name="MUIVerb" Type="string" Value="zip233 高级压缩…" />
+          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
+          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-advanced-here &quot;%V&quot;" /></RegistryKey>
         </RegistryKey>
         <!-- ZIP233_LEGACY_CLEANUP -->
       </Component>

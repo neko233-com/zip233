@@ -1,6 +1,6 @@
 [package]
 name = "zip233"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 build = "build.rs"
 
@@ -30,6 +30,7 @@ sevenz-rust2 = { version = "0.24.0", features = ["compress"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winreg = "0.55"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 
 [features]
 default = []

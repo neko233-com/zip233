@@ -10,6 +10,8 @@ const legacyArchiveExtensions = ["zst", "lz", "lzma", "cab", "wim", "iso", "dmg"
 const windows = process.platform === "win32";
 const mac = process.platform === "darwin";
 if (!windows && !mac) throw new Error("zip233 packages Windows and macOS builds on their native hosts.");
+const packageInfo = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
+const version = packageInfo.version;
 
 const binary = path.join(root, "target", "release", windows ? "zip233.exe" : "zip233");
 const cliBinary = path.join(root, "target", "release", windows ? "zip233-cli.exe" : "zip233-cli");
@@ -18,7 +20,7 @@ const icon = windows
   : await createMacIcon();
 const tempProject = await mkdtemp(path.join(tmpdir(), "zip233-rdesktop-package-"));
 const target = windows ? "nsis" : "app";
-const config = `[app]\nidentifier = "com.neko233.zip233"\nname = "zip233"\nversion = "0.1.0"\n\n[renderer]\nkind = "webview"\ntrusted_origins = ["rdesktop://localhost"]\n\n[bundle]\nwindows_installer = "nsis"\nmacos_bundle_id = "com.neko233.zip233"\nmacos_dmg = false\nicon = ${JSON.stringify(icon)}\ncopyright = "neko233-com"\n`;
+const config = `[app]\nidentifier = "com.neko233.zip233"\nname = "zip233"\nversion = "${version}"\n\n[renderer]\nkind = "webview"\ntrusted_origins = ["rdesktop://localhost"]\n\n[bundle]\nwindows_installer = "nsis"\nmacos_bundle_id = "com.neko233.zip233"\nmacos_dmg = false\nicon = ${JSON.stringify(icon)}\ncopyright = "neko233-com"\n`;
 
 try {
   await writeFile(path.join(tempProject, "rdesktop.toml"), config, "utf8");
@@ -43,7 +45,7 @@ try {
     const appCliPath = path.join(appPath, "Contents", "MacOS", "zip233-cli");
     await copyFile(cliBinary, appCliPath);
     await chmod(appCliPath, 0o755);
-    const dmgPath = path.join(root, "target", "release", "bundle", "macos", "zip233-0.1.0.dmg");
+    const dmgPath = path.join(root, "target", "release", "bundle", "macos", `zip233-${version}.dmg`);
     await mkdir(path.dirname(dmgPath), { recursive: true });
     await rm(dmgPath, { force: true });
     run("hdiutil", ["create", "-volname", "zip233", "-srcfolder", appPath, "-ov", "-format", "UDZO", dmgPath]);
@@ -55,7 +57,7 @@ try {
 async function patchUninstaller() {
   const outputDir = path.join(root, "target", "release", "bundle", "nsis");
   const scriptPath = path.join(outputDir, "installer.nsi");
-  const installerPath = path.join(outputDir, "zip233-0.1.0-setup.exe");
+  const installerPath = path.join(outputDir, `zip233-${version}-setup.exe`);
   let source = stripBom(await readFile(scriptPath, "utf8"));
   const uninstallStart = source.lastIndexOf('Section "Uninstall"');
   const uninstallEnd = source.indexOf("SectionEnd", uninstallStart);
@@ -63,6 +65,10 @@ async function patchUninstaller() {
 
   const cleanup = [
     ...[...archiveExtensions, ...legacyArchiveExtensions].map((extension) => `    DeleteRegKey HKCU "Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open"`),
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-zip"',
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-advanced"',
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-zip-here"',
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-advanced-here"',
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress"',
     '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here"',
     '    DeleteRegValue HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled"',
@@ -83,6 +89,8 @@ async function patchInstaller() {
   if (installStart < 0 || installEnd < 0) throw new Error("rdesktop NSIS script did not contain its install section");
 
   const writes = [
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\shell\\zip233.compress"',
+    '    DeleteRegKey HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here"',
     '    WriteRegDWORD HKCU "Software\\neko233\\zip233" "ShellIntegrationEnabled" 1',
     ...archiveExtensions.flatMap((extension) => {
       const key = `Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open`;
@@ -92,12 +100,18 @@ async function patchInstaller() {
         `    WriteRegStr HKCU "${key}\\command" "" '"$INSTDIR\\zip233.exe" open "%1"'`,
       ];
     }),
-    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress" "MUIVerb" "压缩为 zip233.7z"',
-    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress" "Icon" "$INSTDIR\\zip233.exe"',
-    `    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress\\command" "" '"$INSTDIR\\zip233.exe" compress "%1"'`,
-    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here" "MUIVerb" "在此处创建 zip233.7z"',
-    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here" "Icon" "$INSTDIR\\zip233.exe"',
-    `    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-here\\command" "" '"$INSTDIR\\zip233.exe" compress-here "%V"'`,
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-zip" "MUIVerb" "直接压缩为 ZIP"',
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-zip" "Icon" "$INSTDIR\\zip233.exe"',
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-zip\\command" "" '"$INSTDIR\\zip233.exe" compress-zip "%1"'`,
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-advanced" "MUIVerb" "zip233 高级压缩…"',
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-advanced" "Icon" "$INSTDIR\\zip233.exe"',
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\shell\\zip233.compress-advanced\\command" "" '"$INSTDIR\\zip233.exe" compress-advanced "%1"'`,
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-zip-here" "MUIVerb" "直接压缩为 ZIP"',
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-zip-here" "Icon" "$INSTDIR\\zip233.exe"',
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-zip-here\\command" "" '"$INSTDIR\\zip233.exe" compress-zip-here "%V"'`,
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-advanced-here" "MUIVerb" "zip233 高级压缩…"',
+    '    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-advanced-here" "Icon" "$INSTDIR\\zip233.exe"',
+    `    WriteRegStr HKCU "Software\\Classes\\Directory\\Background\\shell\\zip233.compress-advanced-here\\command" "" '"$INSTDIR\\zip233.exe" compress-advanced-here "%V"'`,
   ].join("\n") + "\n";
   source = source.slice(0, installEnd) + writes + source.slice(installEnd);
   const cliFile = `    File /oname=zip233-cli.exe "${cliBinary}"\n`;
@@ -107,7 +121,6 @@ async function patchInstaller() {
 }
 
 async function buildMsi() {
-  const packageInfo = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
   const template = await readFile(path.join(root, "installer", "zip233.wxs"), "utf8");
   const shellEntries = archiveExtensions.map((extension) => {
     const key = `Software\\Classes\\SystemFileAssociations\\.${extension}\\shell\\zip233.open`;
