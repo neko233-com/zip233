@@ -42,7 +42,8 @@ jobs:
         shell: pwsh
         run: |
           choco install nsis --yes --no-progress
-          dotnet tool install --global wix
+          # Keep the CI packager on the last pre-OSMF WiX CLI release.
+          dotnet tool install --global wix --version 5.0.2
           $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS'
           if (-not (Test-Path (Join-Path $nsis 'makensis.exe'))) {
             throw "makensis.exe was not found under $nsis"
