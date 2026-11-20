@@ -64,19 +64,19 @@ func buildNSIS(root, releaseDir, ver string) error {
 }
 
 func buildNSISScript(root, releaseDir, ver string) (string, error) {
-	gui, err := absSlash(filepath.Join(releaseDir, "zip233.exe"))
+	gui, err := absNative(filepath.Join(releaseDir, "zip233.exe"))
 	if err != nil {
 		return "", err
 	}
-	cli, err := absSlash(filepath.Join(releaseDir, "zip233-cli.exe"))
+	cli, err := absNative(filepath.Join(releaseDir, "zip233-cli.exe"))
 	if err != nil {
 		return "", err
 	}
-	icon, err := absSlash(filepath.Join(root, "resources", "icons", "zip233-menu.ico"))
+	icon, err := absNative(filepath.Join(root, "resources", "icons", "zip233-menu.ico"))
 	if err != nil {
 		return "", err
 	}
-	mainIcon, err := absSlash(filepath.Join(root, "resources", "icons", "zip233.ico"))
+	mainIcon, err := absNative(filepath.Join(root, "resources", "icons", "zip233.ico"))
 	if err != nil {
 		return "", err
 	}

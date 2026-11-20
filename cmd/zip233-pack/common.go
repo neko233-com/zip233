@@ -100,8 +100,14 @@ func runInEnv(dir string, extraEnv []string, name string, args ...string) error 
 	return nil
 }
 
+// absNative converts a path to an absolute path with OS-native separators.
+// NSIS requires backslashes for absolute source paths on Windows.
+func absNative(path string) (string, error) {
+	return filepath.Abs(path)
+}
+
 // absSlash converts a path to an absolute, forward-slash form suitable for
-// embedding in NSIS and WiX sources on Windows hosts.
+// embedding in WiX XML source paths.
 func absSlash(path string) (string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {

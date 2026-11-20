@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -326,10 +325,12 @@ func TestSetAutoCheckRoundTrip(t *testing.T) {
 	if s.AutoCheckEnabled() {
 		t.Fatal("SetAutoCheck(false) 后 AutoCheckEnabled 应为 false")
 	}
-	if runtime.GOOS != "windows" {
-		if _, err := os.Stat(filepath.Join(temp, "zip233", "update.json")); err != nil {
-			t.Fatalf("配置应写入临时目录：%v", err)
-		}
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatalf("读取用户配置目录失败：%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(configDir, "zip233", "update.json")); err != nil {
+		t.Fatalf("配置应写入临时目录：%v", err)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,9 +21,23 @@ func isolateStateDir(t *testing.T) string {
 	return dir
 }
 
+func configDirFromEnv(t *testing.T) string {
+	t.Helper()
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatalf("读取用户配置目录失败：%v", err)
+	}
+	return dir
+}
+
+func statePathFromEnv(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(configDirFromEnv(t), "zip233", "state.json")
+}
+
 func TestStatePersistRoundTrip(t *testing.T) {
 	dir := isolateStateDir(t)
-	path := filepath.Join(dir, "zip233", "state.json")
+	path := statePathFromEnv(t)
 
 	added := time.Date(2026, 11, 20, 10, 30, 0, 0, time.UTC)
 	started := time.Date(2026, 11, 20, 11, 0, 0, 0, time.UTC)
@@ -124,16 +137,14 @@ func TestStatePersistRoundTrip(t *testing.T) {
 	if b.tasks[1].Status != taskDone || b.tasks[1].Message != "解压完成" {
 		t.Errorf("已完成的任务应原样还原：%+v", b.tasks[1])
 	}
-	if runtime.GOOS != "windows" {
-		if _, err := os.Stat(filepath.Join(dir, "zip233", "state.json")); err != nil {
-			t.Fatalf("状态目录应位于临时目录：%v", err)
-		}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("状态目录应位于临时目录：%v", err)
 	}
 }
 
 func TestStateQueuedTaskFailsOnRestart(t *testing.T) {
-	dir := isolateStateDir(t)
-	path := filepath.Join(dir, "zip233", "state.json")
+	isolateStateDir(t)
+	path := statePathFromEnv(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -166,8 +177,8 @@ func TestStateQueuedTaskFailsOnRestart(t *testing.T) {
 }
 
 func TestStateIgnoresInvalidFiles(t *testing.T) {
-	dir := isolateStateDir(t)
-	path := filepath.Join(dir, "zip233", "state.json")
+	isolateStateDir(t)
+	path := statePathFromEnv(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +205,7 @@ func TestStateIgnoresInvalidFiles(t *testing.T) {
 
 func TestStateCapsTasks(t *testing.T) {
 	dir := isolateStateDir(t)
-	path := filepath.Join(dir, "zip233", "state.json")
+	path := statePathFromEnv(t)
 
 	var saved savedState
 	saved.Version = stateVersion

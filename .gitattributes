@@ -1,0 +1,17 @@
+# 统一文本换行：go.sum 的 Windows CRLF 会让 go mod tidy -diff 误判。
+* text=auto
+*.go text eol=lf
+go.mod text eol=lf
+go.sum text eol=lf
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.wxs text eol=crlf
+*.rtf text eol=crlf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.svg text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.css text eol=lf
