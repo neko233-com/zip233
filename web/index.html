@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>zip233 · 解压与压缩</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3.5 22 20.5H2Z" fill="currentColor" stroke="none"/></svg>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">zip233</div>
+        <div class="brand-ver" id="versionText">v…</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="files" title="文件">
+        <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+        <span>文件</span>
+      </button>
+      <button class="nav-item" data-view="recent" title="最近">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7c2.4 0 4.5 1.2 5.8 3H13V3z"/><path d="M12 8v5l3 2"/></svg>
+        <span>最近</span>
+      </button>
+      <button class="nav-item" data-view="completed" title="已完成">
+        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+        <span>已完成</span>
+      </button>
+      <button class="nav-item" data-view="settings" title="设置">
+        <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-4h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h4v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4h-.2a1.7 1.7 0 0 0-1.6 1z"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">轻量 · 免费 · 开源</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title" id="viewTitle">文件</div>
+      <div class="topbar-actions">
+        <button class="btn ghost" id="btnOpenArchive">
+          <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+          打开压缩包
+        </button>
+        <button class="btn primary" id="btnCreate">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          新建压缩包
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- 文件 -->
+      <section class="view" id="view-files">
+        <div class="hero">
+          <h1>轻松解压与压缩</h1>
+          <p>支持 ZIP、7z、RAR、TAR.GZ 等常见格式，拖放或选择文件即可开始。</p>
+        </div>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择压缩包">
+          <div class="dropzone-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          </div>
+          <div class="dropzone-title">把压缩包拖到这里</div>
+          <div class="dropzone-sub">或点击下方按钮选择文件（浏览器安全限制，拖放需通过按钮选择）</div>
+          <button class="btn primary" id="dropzoneBtn">选择压缩包</button>
+        </div>
+        <div class="cards">
+          <div class="card" id="cardOpen">
+            <div class="card-ico blue"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg></div>
+            <div class="card-body">
+              <div class="card-title">打开压缩包</div>
+              <div class="card-desc">查看内容、测试完整性、解压到指定目录</div>
+            </div>
+            <button class="btn small" id="cardOpenBtn">选择</button>
+          </div>
+          <div class="card" id="cardCreate">
+            <div class="card-ico purple"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="card-body">
+              <div class="card-title">新建压缩包</div>
+              <div class="card-desc">选择多个文件或文件夹，设置格式与密码</div>
+            </div>
+            <button class="btn small" id="cardCreateBtn">选择</button>
+          </div>
+        </div>
+        <div class="hint">提示：Windows 下可注册右键菜单，在资源管理器中直接压缩与解压。</div>
+      </section>
+
+      <!-- 最近 -->
+      <section class="view" id="view-recent" hidden>
+        <div class="section-head">
+          <div>
+            <h2>最近</h2>
+            <p class="muted">最近打开过的压缩包，仅保存在本机。</p>
+          </div>
+          <button class="btn ghost small" id="btnClearRecent">清空记录</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>名称</th><th>路径</th><th>时间</th><th>操作</th></tr></thead>
+            <tbody id="recentTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 已完成 -->
+      <section class="view" id="view-completed" hidden>
+        <div class="section-head">
+          <div>
+            <h2>已完成</h2>
+            <p class="muted">最近成功完成的操作。</p>
+          </div>
+          <button class="btn ghost small" id="btnClearCompleted">清空记录</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>操作</th><th>名称</th><th>路径</th><th>时间</th></tr></thead>
+            <tbody id="completedTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 设置 -->
+      <section class="view" id="view-settings" hidden>
+        <h2>设置</h2>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">资源管理器右键菜单</div>
+              <div class="panel-desc">在 Windows 资源管理器中直接压缩/解压。仅 Windows 支持。</div>
+            </div>
+            <span class="badge" id="shellStatusText">检测中…</span>
+          </div>
+          <div class="panel-actions">
+            <button class="btn primary small" id="btnRegisterShell">注册 / 修复</button>
+            <button class="btn danger small" id="btnRemoveShell">移除</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">软件更新</div>
+              <div class="panel-desc">当前版本 <b id="updateCurrentVersion">…</b>。可从 GitHub 检查新版并校验后安装。</div>
+            </div>
+          </div>
+          <div class="update-actions">
+            <button class="btn small" id="btnCheckUpdate">检查更新</button>
+            <button class="btn small" id="btnDownloadUpdate">下载并校验</button>
+            <button class="btn small" id="btnInstallUpdate">安装更新</button>
+            <button class="btn ghost small" id="btnPickLocalUpdate">选择本地安装包更新</button>
+          </div>
+          <div class="update-info" id="updateInfoBox">尚未检查更新。</div>
+          <div class="download-box" id="downloadBox" hidden>
+            <div class="download-row">
+              <span id="downloadStatusText">准备中…</span>
+              <span id="downloadPercent">0%</span>
+            </div>
+            <div class="progress"><div class="bar" id="progressBar"></div></div>
+            <button class="btn ghost small" id="btnCancelDownload">取消下载</button>
+          </div>
+          <div class="toggle-list">
+            <label class="toggle-row">
+              <span>
+                <span class="toggle-title">自动检查并下载更新</span>
+                <span class="toggle-desc">启动时自动检查，发现可用更新后自动下载并校验（不会自动安装）。</span>
+              </span>
+              <input type="checkbox" id="autoUpdateToggle" checked>
+            </label>
+            <label class="toggle-row">
+              <span>
+                <span class="toggle-title">自动安装已下载更新（不推荐，默认关闭）</span>
+                <span class="toggle-desc">下载完成后自动调用安装。安装器仍可能要求确认。</span>
+              </span>
+              <input type="checkbox" id="autoInstallToggle">
+            </label>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- 创建压缩包弹窗 -->
+<div class="modal" id="createModal" hidden>
+  <div class="modal-mask" data-close="createModal"></div>
+  <div class="modal-dialog">
+    <div class="modal-head"><h3>新建压缩包</h3><button class="icon-btn" data-close="createModal">×</button></div>
+    <div class="modal-body">
+      <label class="field">
+        <span class="field-label">要压缩的文件 / 文件夹</span>
+        <div class="path-list" id="createPaths"></div>
+        <button class="btn ghost small" id="btnAddCreatePaths">添加文件</button>
+      </label>
+      <label class="field">
+        <span class="field-label">目标文件</span>
+        <div class="inline">
+          <input type="text" id="createTarget" placeholder="留空则弹出保存对话框">
+          <button class="btn ghost small" id="btnPickTarget">选择</button>
+        </div>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span class="field-label">格式</span>
+          <select id="createFormat">
+            <option value="zip">ZIP</option>
+            <option value="7z">7z</option>
+            <option value="tar.gz">TAR.GZ</option>
+            <option value="tar.xz">TAR.XZ</option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field-label">压缩级别</span>
+          <select id="createLevel">
+            <option value="1">最快（1）</option>
+            <option value="3">较快（3）</option>
+            <option value="5" selected>标准（5）</option>
+            <option value="7">较好（7）</option>
+            <option value="9">极限（9）</option>
+          </select>
+        </label>
+      </div>
+      <label class="field">
+        <span class="field-label">密码（可选）</span>
+        <input type="password" id="createPassword" placeholder="留空则不加密">
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-close="createModal">取消</button>
+      <button class="btn primary" id="btnCreateConfirm">开始压缩</button>
+    </div>
+  </div>
+</div>
+
+<!-- 查看归档弹窗 -->
+<div class="modal" id="viewModal" hidden>
+  <div class="modal-mask" data-close="viewModal"></div>
+  <div class="modal-dialog wide">
+    <div class="modal-head">
+      <div>
+        <h3>压缩包内容</h3>
+        <div class="modal-sub" id="archivePathLabel"></div>
+      </div>
+      <button class="icon-btn" data-close="viewModal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="table-wrap scroll">
+        <table>
+          <thead><tr><th>名称</th><th>类型</th><th>大小</th><th>压缩后</th><th>修改时间</th></tr></thead>
+          <tbody id="archiveList"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-foot split">
+      <div class="left-actions">
+        <button class="btn ghost" id="btnTestArchive">测试完整性</button>
+        <button class="btn ghost" id="btnExtractArchive">解压到…</button>
+      </div>
+      <button class="btn primary" data-close="viewModal">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 确认弹窗 -->
+<div class="modal" id="confirmModal" hidden>
+  <div class="modal-mask" data-close="confirmModal"></div>
+  <div class="modal-dialog small-dialog">
+    <div class="modal-head"><h3 id="confirmTitle">确认</h3></div>
+    <div class="modal-body"><p id="confirmMessage"></p></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="btnConfirmCancel">取消</button>
+      <button class="btn primary" id="btnConfirmOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,9 +1,13 @@
-node_modules/
-dist/
 target/
 .cache/
-resources/engines/
-.rdesktop/
 *.log
 .DS_Store
 Thumbs.db
+# WorkBuddy 项目数据（本地）
+.workbuddy/
+
+# 本地构建/测试产生的临时二进制
+/zip233
+/zip233-cli
+/zip233.exe
+/zip233-cli.exe

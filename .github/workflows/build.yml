@@ -18,43 +18,58 @@ jobs:
         include:
           - os: windows-latest
             artifact: zip233-windows-x64
-            files: target/release/bundle/nsis/*.exe
+            files: |
+              target/release/zip233-windows-amd64.msi
+              target/release/zip233-windows-amd64.msi.sha256
+              target/release/zip233-*-x64.msi
+              target/release/zip233-*-x64.msi.sha256
+              target/release/zip233-windows-amd64-setup.exe
+              target/release/zip233-windows-amd64-setup.exe.sha256
+              target/release/zip233-*-x64-setup.exe
+              target/release/zip233-*-x64-setup.exe.sha256
+              target/release/bundle/nsis/*.exe
           - os: macos-latest
             artifact: zip233-macos
             files: target/release/bundle/macos/*.dmg
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-go@v5
         with:
-          node-version: 24
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: npm ci
-      - run: npm run build:frontend
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-      - name: Test archive operations
-        run: cargo test --lib
+          go-version: '1.27.3'
+          cache: true
       - name: Install Windows packaging tools
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install nsis --yes --no-progress
-          # Keep the CI packager on the last pre-OSMF WiX CLI release.
-          dotnet tool install --global wix --version 5.0.2
+          choco install nsis wixtoolset --yes --no-progress
           $nsis = Join-Path ${env:ProgramFiles(x86)} 'NSIS'
           if (-not (Test-Path (Join-Path $nsis 'makensis.exe'))) {
             throw "makensis.exe was not found under $nsis"
           }
+          $wixBin = 'C:\Program Files (x86)\WiX Toolset v3.14\bin'
+          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) {
+            throw "candle.exe was not found under $wixBin"
+          }
           $nsis | Out-File -FilePath $env:GITHUB_PATH -Append
-          (Join-Path $env:USERPROFILE '.dotnet\tools') | Out-File -FilePath $env:GITHUB_PATH -Append
-      - name: Install pinned rdesktop CLI
-        run: cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 46b31da1c5b84441816fe79868658d38e88a1d5d rdesktop-cli
-      - run: npm run package
+          $wixBin | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Generate icons
+        run: go run ./cmd/zip233-icons
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build packages
+        run: go run ./cmd/zip233-pack
+      - name: Package icon assets
+        run: tar -czf zip233-icons.tar.gz -C resources icons
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.files }}
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip233-icons-${{ runner.os }}
+          path: zip233-icons.tar.gz
           if-no-files-found: error

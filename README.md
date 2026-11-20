@@ -1,67 +1,124 @@
 # zip233
 
-**zip233** is a Windows and macOS archive manager built with Rust and the [rdesktop](https://github.com/neko233-com/rdesktop) desktop framework. Archive reading, extraction, integrity checking, and compression run in process through libraries compiled into zip233. Archive operations do not require users to install 7-Zip or another archive program.
+![zip233](resources/icons/zip233-menu-256.png)
 
-## Features
+zip233 是 Windows / macOS 桌面归档管理器，**全部逻辑由 Go 1.27.3 编写**，不依赖 Node、Rust、cgo 或 Electron。归档读写、更新、右键菜单、安装器与打包工具均为 Go 实现；桌面界面使用 MyGo 原生 GPU UI 与 Lobe MyGo 组件绘制，无 WebView、无 HTML/JavaScript。CLI 在终端下使用 Bubble Tea 提供进度与结果卡片。
 
-- Open archives, inspect file lists, test integrity, and extract locally.
-- Read and extract 7z, ZIP, RAR, TAR, gzip, bzip2, xz, JAR, and classic formats including ACE, ARJ, ARC/PAK, ZOO, LHA/LZH, UC2, SQ/SQ2, SQZ, HYP, ICE, and Pack-Ice.
-- Create 7z, ZIP, TAR, TAR.GZ, TAR.XZ, TAR.BZ2, GZIP, BZIP2, and XZ archives.
-- Read encrypted 7z, ZIP, RAR, and encrypted legacy formats supported by the reader. Create AES-256 encrypted 7z and ZIP archives. ZIP encryption protects file contents; ZIP names remain visible by format design. 7z can encrypt names.
-- ZIP reading includes Deflate, Deflate64, BZip2, Zstandard, LZMA, PPMd, and XZ compression methods.
-- Extraction rejects absolute paths and directory traversal entries.
-- Windows installs include idempotent Explorer actions: direct ZIP compression without opening the UI, advanced compression in zip233, and opening archives. Startup self-repairs the registrations.
+视觉采用 Vercel / Geist 风格：黑白灰高对比、三角形几何标识、细边框与点阵背景；桌面 UI、图标与 CLI 表现统一。同一枚 ▲ 三角形 logo 覆盖 GUI 窗口与托盘、CLI、MSI / NSIS / DMG 安装包、文档与资源管理器右键菜单，全平台保持一致。
 
-Format support is explicit. No implementation can promise support for every proprietary or undocumented format. Specialized disk images and future formats are not currently claimed as supported.
+核心原则：归档在本机处理；不要求用户安装 7-Zip；右键菜单仅写当前用户注册表；更新包必须校验 GitHub 官方 Release 提供的 SHA-256。
 
-## Development
+## 功能
 
-Requirements: Node.js, Rust, and the platform desktop toolchain (WebView2/MSVC/Windows SDK on Windows; Xcode Command Line Tools on macOS).
+- 打开、查看、测试、解压归档；创建 ZIP / TAR / TAR.GZ / TAR.BZ2 / TAR.XZ / GZIP / BZIP2 / XZ 归档。
+- 7z 创建使用纯 Go `uned/sevenzip` 写入器，支持 LZMA2、solid 压缩、AES-256 加密与加密文件头；不再需要 7-Zip 助手。
+- ZIP AES-256 加密创建与读取（WinZip AE-2：PBKDF2-HMAC-SHA1，内容 HMAC-SHA1；仅内容加密，ZIP 规范会公开文件名/目录；不支持 ZipCrypto 与 ZIP64）。7z / RAR 加密归档可读取。
+- 读取 7z、ZIP、RAR、TAR、JAR 以及 ACE、ARJ、ARC/PAK、ZOO、LHA/LZH、UC2、SQ/SQZ、ICE、Pack-Ice 等历史格式；RAR 与历史格式为只读。历史格式的覆盖范围取决于底层格式库，不代表支持全部专有格式。
+- CLI 提供 `bench` 基准测试与 `split` / `join` 分卷合并，便于对标 7-Zip 的日常工作流。
+- 解压拒绝绝对路径、盘符、UNC 与 `..` 穿越，防止写出目标目录。
+- Windows 资源管理器右键菜单：文件“使用 zip233 打开”，目录/背景“直接压缩为 ZIP”和“zip233 高级压缩…”，使用独立菜单图标；注册幂等并开机自修复。
+- 多任务：桌面端最多同时运行 4 个归档任务（创建/解压/测试），其余排队，每个任务独立进度。CLI `bench --jobs N` 并行测多格式，默认 `min(CPU, 8)`。
+- 软件更新：手动检查/下载/安装、自动检查与下载、可选自动安装、本地安装包更新；下载竞速官方源与加速镜像，强制 SHA-256 校验。
 
-```sh
-npm install
-npm run dev                 # browser UI preview
-npm run dev:native          # rdesktop native window with Vite hot reload
-npm run build               # frontend, GUI, and CLI release binaries
-npm run build:frontend      # required before cargo test
-cargo test --lib            # round-trip all creator formats and check encryption/path safety
+> 格式边界：7z 创建与加密为纯 Go 实现；`level=none` 使用非 solid 路径，其余使用 solid + LZMA2。ZIP AES-256 仅加密内容，文件名/目录仍可见；不支持 ZipCrypto 与 ZIP64。TAR 及其单流压缩格式不提供密码保护。历史格式不支持写入。CLI 分卷使用 `.zip233-split.json` 清单记录原始大小与 SHA-256，合并时会校验。
+
+## 安装
+
+### Windows
+
+1. 直接下载 release 中的 `zip233-windows-amd64.msi`（稳定名）或 `zip233-<version>-x64.msi`（版本别名），双击安装。该 MSI 与 DownloadX 方案一致：WiX 3、per-machine 安装到 `C:\Program Files\zip233`、需要管理员权限、包含完整 UI 与 SHA-256 sidecar。
+2. 或使用一键脚本：
+
+```powershell
+irm https://raw.githubusercontent.com/neko233-com/zip233/main/scripts/install.ps1 | iex
 ```
 
-To create installers and the macOS app bundle, install the pinned rdesktop CLI and run `npm run package`:
+常用参数：
 
-```sh
-cargo install --locked --git https://github.com/neko233-com/rdesktop.git --rev 46b31da1c5b84441816fe79868658d38e88a1d5d rdesktop-cli
-npm run package
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.2.0
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Silent
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -NoShellIntegration
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 ```
 
-Windows packaging produces both a per-user `.msi` package and a per-user NSIS setup executable. It requires WiX Toolset 4 or newer and `makensis` on `PATH`. Both installers register the same Explorer actions and enable startup self-repair. macOS packaging creates a native `.app` bundle containing the GUI and CLI, plus a compressed `.dmg` using `hdiutil`.
+脚本会从 GitHub Release API 获取安装包与 SHA-256（GitHub asset digest 或 `<asset>.sha256` sidecar），校验失败立即中止；MSI 安装通过 `msiexec /i /passive` 提权执行，`-Silent` 使用 `/qn`。`-NoShellIntegration` 会在安装后关闭右键菜单注册。
 
-Pushing a `v*` tag runs `.github/workflows/release.yml`, builds Windows and macOS packages, and publishes the installers as GitHub Release assets. The updater looks for the MSI on Windows and DMG on macOS.
+本地构建 MSI：
 
-## Command line
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-msi.ps1 -Version 0.2.0
+```
 
-The `zip233-cli` executable is installed beside the GUI. It provides localized help, readable tables, and JSON output for scripts:
+需要 WiX 3.14（`candle.exe` / `light.exe`）或设置 `WIX_BIN`；输出 `zip233-windows-amd64.msi` 与同名 `.sha256`。
+
+### macOS
 
 ```sh
-zip233-cli --help
+curl -fsSL https://raw.githubusercontent.com/neko233-com/zip233/main/scripts/install.sh | sh
+```
+
+支持 `--version v0.2.0`、`--silent`、`--uninstall`、`--mirror <url>`、`--force`。macOS 安装器会把 `zip233.app` 放入 `/Applications`，无权限时回退到 `$HOME/Applications`。Linux 桌面版暂不支持，脚本会明确退出。
+
+## 更新
+
+- **手动更新**：设置 → 软件更新 → 检查更新 → 下载并校验 → 打开安装。
+- **自动更新**：设置中开启“自动检查与下载”。启动后与每 6 小时检查一次；发现新版本自动下载并校验，安装前仍需确认（可选开启自动安装）。
+- **本地包更新**：设置 → 软件更新 → 选择本地安装包。本地包不做官方摘要校验，请只使用可信来源。
+- Windows 更新优先版本化 MSI，缺失时使用稳定名 MSI，再回退 EXE setup；macOS 使用 DMG。发布包同时提供 `.sha256`，API 未提供 digest 时更新器会读取 sidecar。
+
+## Windows 右键菜单
+
+设置 → 系统集成 → 注册并开启自修复。菜单项包括：
+
+- 文件：使用 zip233 打开、解压到这里、解压到文件夹…、测试完整性
+- 文件夹：直接压缩为 ZIP（静默生成，不覆盖同名文件）、zip233 高级压缩…
+- 文件夹背景：直接压缩为 ZIP、zip233 高级压缩…
+
+命令行直执行动作（右键静默压缩/解压/测试）不会打开窗口；加密归档在静默模式下会提示用 zip233 打开并输入密码。启动自修复与安装器写入同一组注册表项。
+
+图标来自安装目录下的 `zip233-menu.ico`。重复注册只会更新 zip233 自有键值；启动时自动修复丢失或指向旧安装路径的注册。选择“移除”可清理所有 zip233 自有菜单项。
+
+## 状态持久化
+
+桌面 UI 在 `%LOCALAPPDATA%` 对应的用户配置目录（`os.UserConfigDir()/zip233/state.json`）保存归档列表、最近任务、默认输出目录与排序状态。密码不会明文持久化；重启后需要重新输入。未完成任务会标记为中断，避免误报成功。
+
+## 图标
+
+`resources/icons/` 包含全套 logo：16/24/32/48/64/128/256/512/1024 PNG、多分辨率 `zip233.ico`、macOS `zip233.icns`，以及右键菜单专用 `zip233-menu.ico` / PNG。由 Go 生成器从母版重建：
+
+```sh
+go run ./cmd/zip233-icons
+```
+
+## 开发
+
+要求：Go 1.27.3+。Windows 打包使用 WiX 3.14（`candle.exe` / `light.exe`，可通过 `WIX_BIN` 指定）与 NSIS（`makensis`）；macOS 打包使用系统 `hdiutil`。
+
+```sh
+go run ./cmd/zip233              # MyGo 原生 GPU 桌面 UI
+go run ./cmd/zip233-cli --help   # CLI（TTY 下 Bubble Tea，--json/非 TTY 为纯文本）
+go test ./...
+go vet ./...
+go run ./cmd/zip233-icons        # 重建图标
+go run ./cmd/zip233-pack         # 构建 MSI / EXE / DMG
+```
+
+CLI 示例：
+
+```sh
 zip233-cli formats --json
 zip233-cli list archive.zip
 zip233-cli test archive.7z --ask-password
 zip233-cli extract archive.rar --output ./unpacked --password-stdin
-zip233-cli create backup.7z ./project --ask-password
-zip233-cli create backup.zip ./project --format zip --ask-password
+zip233-cli create backup.7z ./project --format 7z --ask-password
+zip233-cli bench --formats zip,7z,tar.gz --json
+zip233-cli split backup.7z --size 50M
+zip233-cli join backup.7z.part-001
 ```
 
-Use `--ask-password` for hidden interactive input, or pipe one password line with `--password-stdin`. Passwords are not accepted as command-line text, avoiding shell-history and process-list exposure.
+密码不接受命令行明文，避免 shell 历史和进程列表泄露。`bench` 测试创建与解压速度、压缩比；`split` / `join` 提供分卷与 SHA-256 校验合并。
 
-## Updates
+## 发布
 
-In **Settings → Software updates**, use **Check for updates** to check manually. Automatic checking and downloading are off by default. Enabling them checks on launch, downloads an available package, and asks before opening its installer. Downloads try GitHub first and then configured-in-app mirror endpoints; all bytes must match the SHA-256 digest from GitHub's official Release API before zip233 marks an update ready.
-
-## Windows Explorer menu
-
-In **Settings → Windows right-click menu**, choose **Register and enable self-repair**. Folder and directory-background menus each expose two compression actions: **Directly compress to ZIP** runs silently and creates a non-overwriting ZIP beside the selected folder or inside the current directory; **zip233 Advanced Compression** opens the app with the folder selected. Repeating registration safely updates zip233-owned registry values. When enabled, startup repairs missing entries or entries that point at a previous install location. Choose **Remove** to delete those menu items and turn off self-repair.
-
-## Built-in archive support
-
-The reader uses [unarc-rs](https://github.com/mkrueger/unarc-rs) for 7z, ZIP, RAR, TAR, JAR, and a broad set of legacy formats. ZIP, 7z, TAR, gzip, bzip2, and xz creation is handled in process by Rust libraries. RAR and legacy formats are read/extract only. The CLI `formats` command prints the supported reader and creator lists. Encrypted archives require the correct password; zip233 does not attempt password cracking.
+推送 `v*` 标签触发 `.github/workflows/release.yml`：Go 1.27.3 构建、测试、生成图标、产出 Windows MSI/EXE 与 macOS DMG，并把一键安装脚本一起发布为 Release 资产。`build.yml` 在 main 分支与 PR 上执行相同检查。

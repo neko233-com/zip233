@@ -1,0 +1,81 @@
+name: Go test matrix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+          cache: true
+
+      - name: go.mod tidy check
+        run: go mod tidy -diff
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Unit tests
+        run: go test -count=1 ./...
+
+      # Windows 上注册表的右键菜单逻辑由 build tag 纳入 go test，
+      # 这里再显式跑一次 shell 包并开启竞态检测。
+      - name: Windows shell + race tests
+        if: runner.os == 'Windows'
+        env:
+          CGO_ENABLED: '1'
+        run: |
+          go test -count=1 ./internal/shell/...
+          go test -race ./...
+
+      - name: Script syntax (Unix)
+        if: runner.os != 'Windows'
+        run: sh -n scripts/test-all.sh
+
+      - name: CLI smoke (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          go run ./cmd/zip233-cli formats --json | grep '"create"'
+          go run ./cmd/zip233-cli bench --formats zip --json | grep '"ok": *true'
+          tmp=$(mktemp -d)
+          trap 'rm -rf "$tmp"' EXIT
+          printf 'zip233 CI smoke payload 0123456789\n' > "$tmp/src.bin"
+          go run ./cmd/zip233-cli split "$tmp/src.bin" --size 16 --json | grep '"parts"'
+          go run ./cmd/zip233-cli join "$tmp/src.bin.part-001" --output "$tmp/out.bin" --json | grep '"size"'
+          cmp "$tmp/src.bin" "$tmp/out.bin"
+
+      - name: Script syntax (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash -n scripts/test-all.sh
+
+      - name: Coverage (Linux)
+        if: runner.os == 'Linux'
+        run: go test -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zip233-test-coverage
+          path: coverage.out
+          if-no-files-found: warn

@@ -1,74 +1,84 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
-  <Package
-    Name="zip233"
-    Manufacturer="neko233-com"
-    Version="$(var.PackageVersion)"
-    UpgradeCode="E5C34A7B-20BE-4F2E-BC72-F0CF1EEA1B67"
-    Scope="perUser"
-    Compressed="yes">
-    <MajorUpgrade DowngradeErrorMessage="已安装较新版本的 zip233。" />
-    <MediaTemplate EmbedCab="yes" />
-    <Icon Id="Zip233Icon" SourceFile="$(var.IconFile)" />
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  zip233 WiX 3 installer template (DownloadX style).
 
-    <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="ProgramsFolder" Name="Programs">
+  cmd/zip233-pack replaces the double-brace placeholders and writes the result
+  to target/release/bundle/msi/zip233.generated.wxs, then compiles it with candle.exe and
+  links it with light.exe. The Shell context-menu verbs are deliberately NOT
+  authored here: the runtime (internal/shell) registers and self-repairs them
+  per user. MSI only writes the HKCU opt-in flag that enables that behaviour.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="zip233"
+           Language="1033"
+           Version="{{VERSION}}"
+           Manufacturer="neko233-com"
+           UpgradeCode="0E7C4A9B-3D52-4F81-9C6E-2B1A8D5F7C30">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of zip233 is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="Zip233MainIcon" SourceFile="{{ICON_FILE}}" />
+    <Property Id="ARPPRODUCTICON" Value="Zip233MainIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/neko233-com/zip233" />
+
+    <UIRef Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="{{LICENSE_FILE}}" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="zip233" />
       </Directory>
-    </StandardDirectory>
-    <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="ProgramMenuZip233" Name="zip233" />
-    </StandardDirectory>
-
-    <Feature Id="MainFeature" Title="zip233" Level="1">
-      <ComponentRef Id="ApplicationExecutable" />
-      <ComponentRef Id="CliExecutable" />
-      <ComponentRef Id="ShellIntegration" />
-      <ComponentRef Id="StartMenuShortcut" />
-    </Feature>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="Zip233MenuFolder" Name="zip233" />
+      </Directory>
+    </Directory>
 
     <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="ApplicationExecutable" Guid="E5C34A7B-20BE-4F2E-BC72-F0CF1EEA1B68">
-        <File Id="AppExe" Source="$(var.AppExe)" KeyPath="yes" />
+      <Component Id="Zip233GUI" Guid="38A149A7-0DBC-4DC6-8279-639D61DEF5A9" Win64="yes">
+        <File Id="Zip233Exe" Name="zip233.exe" Source="{{PAYLOAD_DIR}}\zip233.exe" KeyPath="yes" />
       </Component>
-      <Component Id="CliExecutable" Guid="E5C34A7B-20BE-4F2E-BC72-F0CF1EEA1B69">
-        <File Id="CliExe" Source="$(var.CliExe)" KeyPath="yes" />
+      <Component Id="Zip233CLI" Guid="18602DFE-2006-43EA-98E0-8A77BADA0AB8" Win64="yes">
+        <File Id="Zip233CliExe" Name="zip233-cli.exe" Source="{{PAYLOAD_DIR}}\zip233-cli.exe" KeyPath="yes" />
       </Component>
-
-      <Component Id="ShellIntegration" Guid="*">
-        <RegistryValue Root="HKCU" Key="Software\neko233\zip233" Name="ShellIntegrationEnabled" Type="integer" Value="1" KeyPath="yes" />
-        <!-- ZIP233_ARCHIVE_ENTRIES -->
-        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress" Action="removeOnInstall" />
-        <RemoveRegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-here" Action="removeOnInstall" />
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress-zip">
-          <RegistryValue Name="MUIVerb" Type="string" Value="直接压缩为 ZIP" />
-          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-zip &quot;%1&quot;" /></RegistryKey>
+      <Component Id="Zip233MainIconFile" Guid="E4441C0D-4E13-43CF-8AE2-547C7FBF7695" Win64="yes">
+        <File Id="Zip233MainIconSrc" Name="zip233.ico" Source="{{ICON_FILE}}" KeyPath="yes" />
+      </Component>
+      <Component Id="Zip233MenuIconFile" Guid="346DAD8A-35F2-4D03-96FE-4A11BC892C8B" Win64="yes">
+        <File Id="Zip233MenuIconSrc" Name="zip233-menu.ico" Source="{{MENU_ICON_FILE}}" KeyPath="yes" />
+      </Component>
+      <!-- Runtime self-repair opt-in: Explorer verbs are owned by internal/shell. -->
+      <Component Id="Zip233Integration" Guid="9622948D-7BD2-4D36-A13C-621E6D923748" Win64="yes">
+        <RegistryKey Root="HKCU" Key="Software\neko233\zip233">
+          <RegistryValue Name="InstallDir" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Name="ShellIntegrationEnabled" Type="integer" Value="1" KeyPath="yes" />
         </RegistryKey>
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\shell\zip233.compress-advanced">
-          <RegistryValue Name="MUIVerb" Type="string" Value="zip233 高级压缩…" />
-          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-advanced &quot;%1&quot;" /></RegistryKey>
-        </RegistryKey>
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-zip-here">
-          <RegistryValue Name="MUIVerb" Type="string" Value="直接压缩为 ZIP" />
-          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-zip-here &quot;%V&quot;" /></RegistryKey>
-        </RegistryKey>
-        <RegistryKey Root="HKCU" Key="Software\Classes\Directory\Background\shell\zip233.compress-advanced-here">
-          <RegistryValue Name="MUIVerb" Type="string" Value="zip233 高级压缩…" />
-          <RegistryValue Name="Icon" Type="string" Value="[#AppExe]" />
-          <RegistryKey Key="command"><RegistryValue Type="string" Value="&quot;[#AppExe]&quot; compress-advanced-here &quot;%V&quot;" /></RegistryKey>
-        </RegistryKey>
-        <!-- ZIP233_LEGACY_CLEANUP -->
       </Component>
     </DirectoryRef>
 
-    <DirectoryRef Id="ProgramMenuZip233">
-      <Component Id="StartMenuShortcut" Guid="*">
-        <Shortcut Id="StartMenuApplication" Name="zip233" Target="[#AppExe]" WorkingDirectory="INSTALLFOLDER" Icon="Zip233Icon" />
-        <RemoveFolder Id="RemoveProgramMenuZip233" On="uninstall" />
-        <RegistryValue Root="HKCU" Key="Software\neko233\zip233" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    <DirectoryRef Id="Zip233MenuFolder">
+      <Component Id="Zip233Shortcut" Guid="4D8CA8C6-AE0A-4B9E-AFA4-687F09E0A190" Win64="yes">
+        <Shortcut Id="Zip233StartMenu"
+                  Name="zip233"
+                  Description="zip233 Archive Manager"
+                  Target="[INSTALLFOLDER]zip233.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="Zip233MainIcon" />
+        <RemoveFolder Id="RemoveZip233MenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\neko233-com\zip233"
+                       Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </DirectoryRef>
-  </Package>
+
+    <Feature Id="MainFeature" Title="zip233" Level="1">
+      <ComponentRef Id="Zip233GUI" />
+      <ComponentRef Id="Zip233CLI" />
+      <ComponentRef Id="Zip233MainIconFile" />
+      <ComponentRef Id="Zip233MenuIconFile" />
+      <ComponentRef Id="Zip233Integration" />
+      <ComponentRef Id="Zip233Shortcut" />
+    </Feature>
+  </Product>
 </Wix>
