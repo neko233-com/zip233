@@ -36,7 +36,7 @@ irm https://raw.githubusercontent.com/neko233-com/zip233/main/scripts/install.ps
 常用参数：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.2.1
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Version v0.2.2
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -Silent
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -NoShellIntegration
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
@@ -47,7 +47,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 本地构建 MSI：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\build-msi.ps1 -Version 0.2.1
+powershell -ExecutionPolicy Bypass -File .\scripts\build-msi.ps1 -Version 0.2.2
 ```
 
 需要 WiX 3.14（`candle.exe` / `light.exe`）或设置 `WIX_BIN`；输出 `zip233-windows-amd64.msi` 与同名 `.sha256`。
@@ -58,7 +58,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build-msi.ps1 -Version 0.2.1
 curl -fsSL https://raw.githubusercontent.com/neko233-com/zip233/main/scripts/install.sh | sh
 ```
 
-支持 `--version v0.2.1`、`--silent`、`--uninstall`、`--mirror <url>`、`--force`。macOS 安装器会把 `zip233.app` 放入 `/Applications`，无权限时回退到 `$HOME/Applications`。Linux 桌面版暂不支持，脚本会明确退出。
+支持 `--version v0.2.2`、`--silent`、`--uninstall`、`--mirror <url>`、`--force`。macOS 安装器会把 `zip233.app` 放入 `/Applications`，无权限时回退到 `$HOME/Applications`。Linux 桌面版暂不支持，脚本会明确退出。
 
 ## 更新
 
@@ -69,9 +69,9 @@ curl -fsSL https://raw.githubusercontent.com/neko233-com/zip233/main/scripts/ins
 
 ## Windows 右键菜单
 
-设置 → 系统集成 → 注册并开启自修复。菜单项包括：
+设置 → 系统集成 → “加入资源管理器右键菜单”（默认开启，可随时关闭）。菜单项包括：
 
-- 文件：使用 zip233 打开、解压到这里、解压到文件夹…、测试完整性
+- 文件：使用 zip233 打开、解压到这里、解压到同名文件夹、解压到文件夹…、测试完整性
 - 文件夹：直接压缩为 ZIP（静默生成，不覆盖同名文件）、zip233 高级压缩…
 - 文件夹背景：直接压缩为 ZIP、zip233 高级压缩…
 

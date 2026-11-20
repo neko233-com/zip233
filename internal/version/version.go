@@ -2,7 +2,7 @@
 package version
 
 // Version is a semantic version without the leading v.
-const Version = "0.2.1"
+const Version = "0.2.2"
 
 // Tag returns the GitHub release tag for this version.
 func Tag() string { return "v" + Version }

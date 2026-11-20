@@ -135,6 +135,7 @@ type App struct {
 	updateErr      string
 	updateCancel   context.CancelFunc
 	autoCheck      bool
+	shellEnabled   bool
 	lastCheck      time.Time
 	statePath      string
 
@@ -152,12 +153,13 @@ func New(svc contract.Service) *App {
 		panic("desktop: nil service")
 	}
 	a := &App{
-		svc:       svc,
-		filter:    "all",
-		sortAsc:   false,
-		format:    "zip",
-		level:     "",
-		autoCheck: svc.AutoCheckEnabled(),
+		svc:          svc,
+		filter:       "all",
+		sortAsc:      false,
+		format:       "zip",
+		level:        "",
+		autoCheck:    svc.AutoCheckEnabled(),
+		shellEnabled: true,
 	}
 	if bmp, err := ui.DecodeBitmap(logoPNG); err == nil {
 		a.logo = bmp
@@ -171,6 +173,8 @@ func (a *App) Attach(win *mygo.Window) {
 	a.win = win
 	a.progressUnsub = a.svc.SubscribeArchiveProgress(a.handleArchiveProgress)
 	a.startTray()
+	shellEnabled := a.shellEnabled
+	go a.applyShellPreference(shellEnabled)
 	win.OnClose(func(e *mygo.CloseEvent) {
 		if a.quitting || !a.closeTray {
 			return
@@ -806,6 +810,31 @@ func (a *App) copyPath(path string) {
 
 // refreshShellState reads the Explorer integration state on the UI thread.
 func (a *App) refreshShellState() contract.ShellStatus { return a.svc.ShellStatus() }
+
+// applyShellPreference reconciles the persisted toggle with the registry on
+// startup, so the default-on menu is restored even if the keys were missing.
+func (a *App) applyShellPreference(enabled bool) {
+	status := a.svc.ShellStatus()
+	if enabled {
+		if !status.Enabled || !status.Healthy {
+			_, _ = a.svc.RegisterShell()
+		}
+		return
+	}
+	if status.Enabled {
+		_, _ = a.svc.UnregisterShell()
+	}
+}
+
+func (a *App) setShellEnabled(enabled bool) {
+	a.shellEnabled = enabled
+	a.persist()
+	if enabled {
+		a.registerShell()
+	} else {
+		a.unregisterShell()
+	}
+}
 
 func (a *App) registerShell() {
 	status, err := a.svc.RegisterShell()

@@ -18,10 +18,11 @@ func TestShellEntries(t *testing.T) {
 		`Software\Classes\Directory\shell\zip233.compress-advanced`:                 `"C:\Program Files\zip233\zip233.exe" compress-advanced "%1"`,
 		`Software\Classes\Directory\Background\shell\zip233.compress-zip-here`:      `"C:\Program Files\zip233\zip233.exe" compress-zip-here "%V"`,
 		`Software\Classes\Directory\Background\shell\zip233.compress-advanced-here`: `"C:\Program Files\zip233\zip233.exe" compress-advanced-here "%V"`,
-		fileAssocKey("zip"):                `"C:\Program Files\zip233\zip233.exe" open "%1"`,
-		fileVerbKey("zip", "extract-here"): `"C:\Program Files\zip233\zip233.exe" extract-here "%1"`,
-		fileVerbKey("zip", "extract-to"):   `"C:\Program Files\zip233\zip233.exe" extract-to "%1"`,
-		fileVerbKey("zip", "test"):         `"C:\Program Files\zip233\zip233.exe" test-archive "%1"`,
+		fileAssocKey("zip"):                  `"C:\Program Files\zip233\zip233.exe" open "%1"`,
+		fileVerbKey("zip", "extract-here"):   `"C:\Program Files\zip233\zip233.exe" extract-here "%1"`,
+		fileVerbKey("zip", "extract-folder"): `"C:\Program Files\zip233\zip233.exe" extract-folder "%1"`,
+		fileVerbKey("zip", "extract-to"):     `"C:\Program Files\zip233\zip233.exe" extract-to "%1"`,
+		fileVerbKey("zip", "test"):           `"C:\Program Files\zip233\zip233.exe" test-archive "%1"`,
 	}
 	for _, e := range entries {
 		if expected, ok := want[e.path]; ok && e.command != expected {

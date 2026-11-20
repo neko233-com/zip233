@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # zip233 macOS 一键安装 / 更新 / 卸载脚本。
-# 用法: ./install.sh [--version v0.2.1] [--uninstall] [--no-shell-integration] [--silent] [--mirror URL] [--force]
+# 用法: ./install.sh [--version v0.2.2] [--uninstall] [--no-shell-integration] [--silent] [--mirror URL] [--force]
 set -euo pipefail
 
 VERSION="latest"

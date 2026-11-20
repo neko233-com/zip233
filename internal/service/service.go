@@ -275,6 +275,29 @@ func (s *Service) runShellAction(action, path string) error {
 			return passwordHint(errors.New(result.Stderr))
 		}
 		return nil
+	case "extract-folder":
+		archivePath, err := canonicalArchiveFile(path)
+		if err != nil {
+			return err
+		}
+		base := strings.TrimSuffix(filepath.Base(archivePath), filepath.Ext(archivePath))
+		if strings.TrimSpace(base) == "" {
+			base = "archive"
+		}
+		output, err := reserveDir(filepath.Dir(archivePath), base)
+		if err != nil {
+			return err
+		}
+		result, err := archive.Extract(archivePath, output, "")
+		if err != nil {
+			_ = os.Remove(output)
+			return passwordHint(err)
+		}
+		if !result.OK {
+			_ = os.Remove(output)
+			return passwordHint(errors.New(result.Stderr))
+		}
+		return nil
 	case "extract-to":
 		archivePath, err := canonicalArchiveFile(path)
 		if err != nil {
@@ -377,6 +400,27 @@ func reserveZip(directory, base string) (string, func(), error) {
 		return candidate, cleanup, nil
 	}
 	return "", func() {}, errors.New("同名 ZIP 文件太多，无法生成新的归档名称。")
+}
+
+// reserveDir creates a new directory, appending " (n)" when the same-name
+// folder already exists so a right-click extraction never merges silently.
+func reserveDir(directory, base string) (string, error) {
+	for index := 1; index <= 9999; index++ {
+		name := base
+		if index > 1 {
+			name = fmt.Sprintf("%s (%d)", base, index)
+		}
+		candidate := filepath.Join(directory, name)
+		err := os.Mkdir(candidate, 0o755)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("无法创建文件夹 %s：%w", candidate, err)
+		}
+		return candidate, nil
+	}
+	return "", errors.New("同名文件夹太多，无法生成新的解压目录。")
 }
 
 func archiveFilter() []string {

@@ -11,13 +11,14 @@ import (
 const stateVersion = 1
 
 type savedState struct {
-	Version   int            `json:"version"`
-	Archives  []savedArchive `json:"archives"`
-	Tasks     []savedTask    `json:"tasks"`
-	OutputDir string         `json:"output_dir,omitempty"`
-	SortAsc   bool           `json:"sort_asc"`
-	Seq       int            `json:"seq"`
-	SavedAt   string         `json:"saved_at,omitempty"`
+	Version      int            `json:"version"`
+	Archives     []savedArchive `json:"archives"`
+	Tasks        []savedTask    `json:"tasks"`
+	OutputDir    string         `json:"output_dir,omitempty"`
+	SortAsc      bool           `json:"sort_asc"`
+	Seq          int            `json:"seq"`
+	ShellEnabled *bool          `json:"shell_enabled,omitempty"`
+	SavedAt      string         `json:"saved_at,omitempty"`
 }
 
 type savedArchive struct {
@@ -128,6 +129,12 @@ func (a *App) loadState() {
 	a.outputDir = saved.OutputDir
 	a.sortAsc = saved.SortAsc
 	a.seq = saved.Seq
+	// Missing field means "not configured yet": the menu stays on by default.
+	if saved.ShellEnabled != nil {
+		a.shellEnabled = *saved.ShellEnabled
+	} else {
+		a.shellEnabled = true
+	}
 }
 
 // persist writes UI state atomically. It never stores archive passwords.
@@ -135,12 +142,14 @@ func (a *App) persist() {
 	if a.statePath == "" {
 		a.statePath = statePath()
 	}
+	shellEnabled := a.shellEnabled
 	saved := savedState{
-		Version:   stateVersion,
-		SortAsc:   a.sortAsc,
-		Seq:       a.seq,
-		OutputDir: a.outputDir,
-		SavedAt:   time.Now().UTC().Format(time.RFC3339),
+		Version:      stateVersion,
+		SortAsc:      a.sortAsc,
+		Seq:          a.seq,
+		OutputDir:    a.outputDir,
+		ShellEnabled: &shellEnabled,
+		SavedAt:      time.Now().UTC().Format(time.RFC3339),
 	}
 	for _, entry := range a.archives {
 		saved.Archives = append(saved.Archives, savedArchive{

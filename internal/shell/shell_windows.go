@@ -43,6 +43,7 @@ type fileVerb struct {
 var fileVerbs = []fileVerb{
 	{suffix: "open", muiVerb: "使用 zip233 打开", command: ` open "%1"`},
 	{suffix: "extract-here", muiVerb: "解压到这里", command: ` extract-here "%1"`},
+	{suffix: "extract-folder", muiVerb: "解压到同名文件夹", command: ` extract-folder "%1"`},
 	{suffix: "extract-to", muiVerb: "解压到文件夹…", command: ` extract-to "%1"`},
 	{suffix: "test", muiVerb: "测试完整性", command: ` test-archive "%1"`},
 }

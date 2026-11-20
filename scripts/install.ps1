@@ -9,8 +9,8 @@
 
 .EXAMPLE
     irm https://raw.githubusercontent.com/neko233-com/zip233/main/install.ps1 | iex
-    $env:ZIP233_VERSION = "0.2.1"; irm .../install.ps1 | iex
-    powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.2.1 -Silent
+    $env:ZIP233_VERSION = "0.2.2"; irm .../install.ps1 | iex
+    powershell -ExecutionPolicy Bypass -File install.ps1 -Version v0.2.2 -Silent
     powershell -ExecutionPolicy Bypass -File install.ps1 -Uninstall -Silent
 #>
 param(

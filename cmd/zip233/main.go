@@ -15,6 +15,7 @@ import (
 
 	"github.com/neko233-com/zip233/internal/desktop"
 	"github.com/neko233-com/zip233/internal/service"
+	"github.com/neko233-com/zip233/internal/shell"
 	"github.com/neko233-com/zip233/internal/version"
 )
 
@@ -23,8 +24,22 @@ func main() {
 
 	// 右键菜单的直执行动作：静默完成压缩后立即退出，不打开 UI。
 	req := svc.LaunchRequest()
+	if req.Action == "register-shell" || req.Action == "unregister-shell" {
+		var err error
+		if req.Action == "register-shell" {
+			_, err = shell.Register()
+		} else {
+			_, err = shell.Unregister()
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "操作失败: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 	if req.Action == "compress-zip" || req.Action == "compress-zip-here" ||
-		req.Action == "extract-here" || req.Action == "extract-to" || req.Action == "test-archive" {
+		req.Action == "extract-here" || req.Action == "extract-folder" ||
+		req.Action == "extract-to" || req.Action == "test-archive" {
 		if req.Path == nil {
 			fmt.Fprintln(os.Stderr, "操作失败: 缺少目标路径")
 			os.Exit(1)

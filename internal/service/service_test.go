@@ -211,6 +211,38 @@ func TestRunShellActionExtractHere(t *testing.T) {
 	}
 }
 
+func TestRunShellActionExtractFolder(t *testing.T) {
+	s := &Service{}
+	dir := t.TempDir()
+	src := filepath.Join(dir, "inside.txt")
+	if err := os.WriteFile(src, []byte("same-name folder"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(dir, "bundle.zip")
+	if result, err := archive.Create([]string{src}, target, "zip", "", ""); err != nil || !result.OK {
+		t.Fatalf("创建测试归档失败：result=%+v err=%v", result, err)
+	}
+	if err := os.Remove(src); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.runShellAction("extract-folder", target); err != nil {
+		t.Fatalf("extract-folder 失败：%v", err)
+	}
+	got, err := os.ReadFile(filepath.Join(dir, "bundle", "inside.txt"))
+	if err != nil || string(got) != "same-name folder" {
+		t.Fatalf("同名目录解压内容不匹配：%q err=%v", got, err)
+	}
+
+	// 再次解压不能合并进已有目录，应生成 "bundle (2)"。
+	if err := s.runShellAction("extract-folder", target); err != nil {
+		t.Fatalf("第二次 extract-folder 失败：%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "bundle (2)", "inside.txt")); err != nil {
+		t.Fatalf("重复解压应创建带序号的新目录：%v", err)
+	}
+}
+
 func TestRunShellActionEncryptedArchiveHint(t *testing.T) {
 	s := &Service{}
 	dir := t.TempDir()

@@ -42,10 +42,11 @@ func TestStatePersistRoundTrip(t *testing.T) {
 	added := time.Date(2026, 11, 20, 10, 30, 0, 0, time.UTC)
 	started := time.Date(2026, 11, 20, 11, 0, 0, 0, time.UTC)
 	a := &App{
-		statePath: path,
-		sortAsc:   true,
-		seq:       7,
-		outputDir: filepath.Join(dir, "downloads"),
+		statePath:    path,
+		sortAsc:      true,
+		seq:          7,
+		shellEnabled: false,
+		outputDir:    filepath.Join(dir, "downloads"),
 		archives: []ArchiveEntry{
 			{
 				ID: "arch-1", Path: filepath.Join(dir, "a.zip"), Name: "a.zip",
@@ -86,6 +87,9 @@ func TestStatePersistRoundTrip(t *testing.T) {
 	if raw.Version != stateVersion || raw.Seq != 7 || !raw.SortAsc || raw.OutputDir != a.outputDir {
 		t.Fatalf("持久化字段错误：%+v", raw)
 	}
+	if raw.ShellEnabled == nil || *raw.ShellEnabled {
+		t.Fatalf("右键菜单开关应持久化为关闭：%+v", raw.ShellEnabled)
+	}
 	if raw.SavedAt == "" {
 		t.Error("SavedAt 缺失")
 	}
@@ -112,8 +116,8 @@ func TestStatePersistRoundTrip(t *testing.T) {
 	if b.statePath != path {
 		t.Errorf("loadState 使用了错误的路径：%s", b.statePath)
 	}
-	if b.seq != 7 || !b.sortAsc || b.outputDir != a.outputDir {
-		t.Errorf("标量字段往返失败：seq=%d sortAsc=%v outputDir=%q", b.seq, b.sortAsc, b.outputDir)
+	if b.seq != 7 || !b.sortAsc || b.outputDir != a.outputDir || b.shellEnabled {
+		t.Errorf("标量字段往返失败：seq=%d sortAsc=%v shellEnabled=%v outputDir=%q", b.seq, b.sortAsc, b.shellEnabled, b.outputDir)
 	}
 	if len(b.archives) != 2 || len(b.tasks) != 2 {
 		t.Fatalf("往返后数量错误：archives=%d tasks=%d", len(b.archives), len(b.tasks))
@@ -139,6 +143,27 @@ func TestStatePersistRoundTrip(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("状态目录应位于临时目录：%v", err)
+	}
+}
+
+func TestStateShellEnabledDefaultsOn(t *testing.T) {
+	isolateStateDir(t)
+	path := statePathFromEnv(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(savedState{Version: stateVersion})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var app App
+	app.loadState()
+	if !app.shellEnabled {
+		t.Fatal("旧状态没有 shell_enabled 字段时，右键菜单应默认开启")
 	}
 }
 

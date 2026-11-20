@@ -1,6 +1,6 @@
 # Builds the Windows x64 MSI into target\release (DownloadX-style, WiX 3).
 #
-#   powershell -ExecutionPolicy Bypass -File scripts\build-msi.ps1 -Version 0.2.1
+#   powershell -ExecutionPolicy Bypass -File scripts\build-msi.ps1 -Version 0.2.2
 #   powershell -ExecutionPolicy Bypass -File scripts\build-msi.ps1 -SkipBuild
 #
 # Requires Go 1.27.3+ and WiX Toolset 3.14 (candle.exe and light.exe).
@@ -20,7 +20,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
         $Version = $describe -replace '^v', ''
     } catch {}
 }
-if ([string]::IsNullOrWhiteSpace($Version)) { $Version = "0.2.1" }
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = "0.2.2" }
 $Version = $Version -replace '^v', ''
 if ($Version -notmatch '^\d+\.\d+\.\d+') {
     throw "Version must look like 0.2.0 (got '$Version')"

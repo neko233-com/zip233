@@ -20,32 +20,30 @@ func (a *App) settingsPage(c *ui.Context, tk *theme.Tokens) {
 
 			layout.Block(c, layout.BlockProps{Variant: layout.BlockFilled}).Padding(18).Gap(14).Children(func() {
 				a.sectionTitle(c, tk, "资源管理器右键菜单")
+				checkbox := choice.Checkbox(c, &a.shellEnabled, "加入资源管理器右键菜单", choice.CheckboxProps{})
+				if checkbox.Changed() {
+					a.setShellEnabled(a.shellEnabled)
+				}
 				status := a.refreshShellState()
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					if status.Enabled && status.Healthy {
 						ui.Icon(c, lucide.CircleCheck()).FontSize(15).TextColor(tk.Success)
-						ui.Text(c, "已注册且运行正常").FontSize(12).TextColor(tk.Success)
-					} else if status.Enabled {
+						ui.Text(c, "已加入且运行正常").FontSize(12).TextColor(tk.Success)
+					} else if a.shellEnabled {
 						ui.Icon(c, lucide.CircleAlert()).FontSize(15).TextColor(tk.Warning)
-						ui.Text(c, "已注册，但状态异常，建议修复").FontSize(12).TextColor(tk.Warning)
+						ui.Text(c, "已开启，正在注册或需要修复").FontSize(12).TextColor(tk.Warning)
 					} else {
 						ui.Icon(c, lucide.CircleAlert()).FontSize(15).TextColor(tk.TextTertiary)
-						ui.Text(c, "未注册").FontSize(12).TextColor(tk.TextSecondary)
+						ui.Text(c, "已关闭").FontSize(12).TextColor(tk.TextSecondary)
 					}
 				})
-				ui.Text(c, "注册后可在文件夹上右键直接使用“压缩为 ZIP”；在文件夹空白处右键可将当前目录内容压缩到当前文件夹。").
+				ui.Text(c, "开启后可在归档文件上右键使用“解压到同名文件夹”；在文件夹或文件夹空白处右键可压缩为 ZIP。").
 					FontSize(12).LineHeight(1.6).TextColor(tk.TextSecondary)
-				ui.Row(c).Gap(8).Children(func() {
-					if action.Button(c, "注册右键菜单", action.ButtonProps{Variant: action.Primary, Size: theme.Small}).Clicked() {
+				if a.shellEnabled && (!status.Enabled || !status.Healthy) {
+					if action.Button(c, "立即修复", action.ButtonProps{Variant: action.Text, Size: theme.Small}).Clicked() {
 						a.registerShell()
 					}
-					if action.Button(c, "移除右键菜单", action.ButtonProps{Variant: action.Default, Size: theme.Small}).Clicked() {
-						a.unregisterShell()
-					}
-					if action.Button(c, "修复", action.ButtonProps{Variant: action.Text, Size: theme.Small}).Clicked() {
-						a.registerShell()
-					}
-				})
+				}
 			})
 
 			layout.Block(c, layout.BlockProps{Variant: layout.BlockFilled}).Padding(18).Gap(12).Children(func() {

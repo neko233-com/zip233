@@ -26,6 +26,7 @@ var fileVerbs = []struct {
 }{
 	{"open", "使用 zip233 打开", "open"},
 	{"extract-here", "解压到这里", "extract-here"},
+	{"extract-folder", "解压到同名文件夹", "extract-folder"},
 	{"extract-to", "解压到文件夹…", "extract-to"},
 	{"test", "测试完整性", "test-archive"},
 }
