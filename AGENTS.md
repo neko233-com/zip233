@@ -37,5 +37,6 @@ msiexec /i target\release\zip233-windows-amd64.msi /passive /norestart
 
 ## 发布
 
-- 推送 `v*` 标签触发 `.github/workflows/release.yml`；三平台 CI 全绿后才允许打标签。
+- 默认在本机打包并发布；Actions 的 `Publish release` 仅手动触发，需输入已存在的标签。
+- 三平台 CI 全绿后才允许打标签。
 - 发布后核验 Release 资产齐全，`.sha256` 内容与 GitHub asset digest 一致。

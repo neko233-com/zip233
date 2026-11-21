@@ -1,9 +1,12 @@
 name: Publish release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "已存在的发布标签，例如 v0.2.2"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,6 +16,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27.3'
@@ -36,7 +41,7 @@ jobs:
       - run: go test ./...
       - name: Build MSI + NSIS with WiX 3
         shell: pwsh
-        run: .\scripts\build-msi.ps1 -Version "$env:GITHUB_REF_NAME"
+        run: .\scripts\build-msi.ps1 -Version "${{ inputs.tag }}"
       - name: Stage Windows assets
         shell: pwsh
         run: |
@@ -61,6 +66,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-go@v5
         with:
           go-version: '1.27.3'
@@ -87,6 +94,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
@@ -97,7 +106,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release-assets/* \
+          gh release create "${{ inputs.tag }}" release-assets/* \
             --verify-tag \
-            --title "$GITHUB_REF_NAME" \
+            --title "${{ inputs.tag }}" \
             --generate-notes

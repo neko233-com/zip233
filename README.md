@@ -121,4 +121,4 @@ zip233-cli join backup.7z.part-001
 
 ## 发布
 
-推送 `v*` 标签触发 `.github/workflows/release.yml`：Go 1.27.3 构建、测试、生成图标、产出 Windows MSI/EXE 与 macOS DMG，并把一键安装脚本一起发布为 Release 资产。`build.yml` 在 main 分支与 PR 上执行相同检查。
+默认在本机打包并发布 Release。`.github/workflows/release.yml` 仅保留手动触发：在 Actions 中选择 “Publish release”，输入已存在的标签（如 `v0.2.2`），才会构建 Windows MSI/EXE 与 macOS DMG 并发布资产。`build.yml` 与 `test.yml` 仍在 main 分支和 PR 上自动执行检查。
